@@ -18,7 +18,7 @@
 
   var state = {
     enabled: true, furigana: true, translation: true, loop: false,
-    tokenizer: null, tokenCache: new Map(),
+    tokenizer: null, tokenizerStatus: "idle", tokenCache: new Map(),
     jpCues: [], enCues: [], tracksSeen: [],
     activeIndex: -1, currentVideoId: "", selectedWord: null, vocab: [],
     panelOpen: false, panelTab: "transcript", controlsCollapsed: false,
@@ -792,16 +792,38 @@
 
   /* ---------- Tokenizer ---------- */
   function initTokenizer() {
-    if (!window.kuromoji) { setStatus("warn", "Furigana engine missing. Plain subtitles still work."); return; }
+    // YouTube sometimes inserts its <video> after DOMContentLoaded. In 2.3.0
+    // boot() only reached this function when a video already existed, so on
+    // those pages subtitles loaded normally but stayed plain and unclickable.
+    // Keep initialization independent of player timing and make it idempotent.
+    if (state.tokenizerStatus !== "idle") return;
+    if (!window.kuromoji) {
+      state.tokenizerStatus = "failed";
+      setStatus("warn", "Furigana engine missing. Plain subtitles still work.");
+      return;
+    }
+    state.tokenizerStatus = "loading";
     setStatus("", "Loading furigana engine (first video only)");
     try {
       window.kuromoji.builder({ dicPath: chrome.runtime.getURL("dict/") }).build(function (err, tok) {
-        if (err) { setStatus("warn", "Furigana unavailable. Tap words still show readings when possible."); return; }
+        if (err || !tok) {
+          state.tokenizerStatus = "failed";
+          diagLog("furigana engine failed" + (err && err.message ? " - " + err.message : ""));
+          setStatus("warn", "Furigana unavailable. Plain subtitles still work.");
+          return;
+        }
         state.tokenizer = tok;
+        state.tokenizerStatus = "ready";
+        state.tokenCache.clear();
+        diagLog("furigana engine ready");
         setStatus("ready", state.jpCues.length ? "Furigana ready" : "Furigana ready - pick a video with Japanese CC");
         if (state.activeIndex >= 0) renderActive();
       });
-    } catch (e) { setStatus("warn", "Furigana unavailable on this page"); }
+    } catch (e) {
+      state.tokenizerStatus = "failed";
+      diagLog("furigana engine failed" + (e && e.message ? " - " + e.message : ""));
+      setStatus("warn", "Furigana unavailable on this page");
+    }
   }
 
   /* ---------- Video wiring ---------- */
@@ -869,9 +891,14 @@
     }
   });
   function boot() {
-    if (ensureRoot()) { wireVideo(); loadPersisted(); initTokenizer(); updateForTime(true); armCaptionWatchdog(); }
+    // Start the furigana engine even when the player has not mounted yet.
+    // Auto-caption videos can create their video element later than manual-CC
+    // videos, which previously skipped tokenizer startup entirely.
+    initTokenizer();
+    if (ensureRoot()) { wireVideo(); loadPersisted(); updateForTime(true); armCaptionWatchdog(); }
   }
   var bootTimer = setInterval(function () {
+    initTokenizer();
     if (ensureRoot()) { wireVideo(); pollNativeTracks(); }
   }, 1500);
   try {

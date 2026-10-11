@@ -2,6 +2,8 @@
 
 A browser extension that turns Japanese subtitles into a study layer on **almost any web video player**: furigana over every line, tap-any-word readings and meanings, line replay and looping, slowdown controls, a searchable transcript, and a saved-words list you can export.
 
+Version 2.3.1 fixes auto-generated YouTube captions appearing as plain, unclickable text. Some videos add their player after the extension first starts; the furigana engine now initializes independently of the player, then immediately re-renders the active auto-caption line with ruby readings and clickable words when it is ready.
+
 Version 2.3.0 adds a minimize button to the player controls. Tap **−** at the right edge of the control bar to tuck the whole menu into one small **Controls** button; tap it again to restore the menu. The choice is remembered across pages.
 
 Version 2.2.0 gives tapped words a real dictionary. Earlier builds only had a small built-in glossary, so most words showed "no definition" even though saving worked. The extension now bundles a JMdict common-word subset (about 30,000 entries, 68,000 lookup forms, readings and English meanings) and looks up the word's dictionary form, so inflected words like 行きます resolve to 行く with its definition. Lookups run fully offline; rare words outside the common subset still show their reading and can be saved.
@@ -50,12 +52,12 @@ Firefox: open `about:debugging#/runtime/this-firefox`, click **Load Temporary Ad
 
 ## Updating (do both reloads, or the old code keeps running)
 
-Chrome and Edge do not auto-update unpacked extensions. Unzip this version over (or next to) the old folder, open `chrome://extensions` (or `edge://extensions`), find **Study Player Anywhere**, click **Reload**, then reload the video tab too. Skipping either reload leaves the old code running. Your saved words carry over. This update takes the version to 2.3.0; the version on the extension card is the quickest way to confirm you are running it.
+Chrome and Edge do not auto-update unpacked extensions. Unzip this version over (or next to) the old folder, open `chrome://extensions` (or `edge://extensions`), find **Study Player Anywhere**, click **Reload**, then reload the video tab too. Skipping either reload leaves the old code running. Your saved words carry over. This update takes the version to 2.3.1; the version on the extension card is the quickest way to confirm you are running it.
 
 ## Troubleshooting
 
 - **Still no subtitles**: open **Subs** on the video. The top box is the diagnostics readout: it shows the page, how many video players and player subtitle tracks were found (with their languages and line counts), which YouTube caption tracks exist, how many subtitle files were spotted, and a short log of what was fetched and what came back. Hit **Retry detection** after pressing play and turning the player's CC on. If you send anyone a bug report, that readout is the useful part.
-- **"Japanese track was empty" on YouTube**: fixed in 2.1.1. If you still see it, confirm the extension card says 2.3.0 and both reloads above were done, then try turning YouTube's own CC button on once and hitting **Retry detection** in **Subs**.
+- **"Japanese track was empty" on YouTube**: fixed in 2.1.1. If you still see it, confirm the extension card says 2.3.1 and both reloads above were done, then try turning YouTube's own CC button on once and hitting **Retry detection** in **Subs**.
 - **Furigana missing but subtitles show**: give the first video a few seconds, check the small status pill under the caption, and reload the page once. The dictionary is about 17 MB unpacked, so a slow disk can take a moment.
 - **Nothing appears at all**: confirm Developer mode is still on, the extension is enabled at `chrome://extensions`, that the video has actually started, then reload the page. Some sites build their player late; Study Player keeps watching and attaches when a video shows up.
 - **Overlay sits in the wrong place**: it anchors to the player's container. Going fullscreen with the player's own fullscreen button usually fixes positioning; one page reload clears anything stuck.
@@ -67,10 +69,14 @@ The extension runs on pages you visit so it can find video players, but it does 
 
 ## Files
 
-- `manifest.json` - extension definition (Manifest V3, all-sites, version 2.3.0)
+- `manifest.json` - extension definition (Manifest V3, all-sites, version 2.3.1)
 - `content.js` / `content.css` - the overlay, transcript, dictionary UI, subtitle parsers (VTT/SRT/ASS, YouTube XML and json3, HLS playlists), native-track reader, auto-loader, diagnostics, and local file loader
 - `injected.js` - page-world helper installed before the player boots: reads YouTube's caption list, and on other sites notices subtitle files and streaming playlists the player fetches (declared in `manifest.json` as a `world: "MAIN"` content script, so no inline script injection is needed)
 - `popup.html` / `popup.js` / `popup.css` - toolbar popup with toggles, status, and CSV export
 - `background.js` - service worker: first-run defaults, plus the cross-origin subtitle fetch that the on-page code routes through
 - `lib/kuromoji.js` + `dict/` - local Japanese tokenizer and its dictionary files for furigana
 - `dict/jmdict.json` - the bundled JMdict common-word subset used for English definitions (built from JMdict by EDRDG; see Good to know for attribution)
+
+## Known issues (being worked on)
+
+- **Furigana sometimes missing on auto-generated captions**: on some YouTube videos that only have auto-generated Japanese captions, the subtitles load but show as plain text with no furigana and no tap-to-define. v2.3.1 addressed one cause (the furigana engine not starting when the player mounts late); if you still see this, reload the video tab and report it. This is under active investigation.
