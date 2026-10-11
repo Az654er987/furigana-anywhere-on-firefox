@@ -1,0 +1,132 @@
+/* Study Player overlay - scoped under #sp-root so it never leaks. */
+#sp-root { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #111619; }
+#sp-root ruby { ruby-position: over; }
+#sp-root rt { color: #0e7074; font-size: .46em; font-weight: 700; letter-spacing: .02em; }
+#sp-root.sp-hide-furigana rt { visibility: hidden; }
+#sp-root.sp-hide-translation .sp-en { display: none; }
+
+.sp-native-off .ytp-caption-window-container,
+.sp-native-off .caption-window { display: none !important; }
+
+#sp-overlay {
+  position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%);
+  width: min(92%, 980px); z-index: 62; pointer-events: none; text-align: center;
+}
+#sp-caption-box {
+  display: inline-block; max-width: 100%; pointer-events: auto;
+  background: rgba(6, 10, 11, .72); border-radius: 14px; padding: 10px 18px 12px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+#sp-caption-box:empty { display: none; }
+#sp-jp {
+  font-size: clamp(20px, 2.6vw, 34px); font-weight: 700; line-height: 1.85;
+  color: #fff; word-break: keep-all; overflow-wrap: anywhere;
+}
+#sp-jp:empty { display: none; }
+.sp-word {
+  border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer;
+  padding: 0 1px; border-radius: 5px; line-height: inherit;
+}
+.sp-word:hover, .sp-word:focus-visible { background: rgba(228,74,42,.45); outline: none; }
+#sp-en { color: #d7e2e5; font-size: clamp(13px, 1.4vw, 17px); margin-top: 2px; line-height: 1.4; }
+#sp-status {
+  pointer-events: auto; margin-top: 8px; display: inline-flex; align-items: center; gap: 7px;
+  color: #c8d4d8; font-size: 12px; background: rgba(6,10,11,.55);
+  padding: 4px 10px; border-radius: 999px;
+}
+#sp-status .sp-dot { width: 7px; height: 7px; border-radius: 50%; background: #8b9a9f; flex: 0 0 auto; }
+#sp-status .sp-dot.ready { background: #57d3c8; }
+#sp-status .sp-dot.warn { background: #ffb020; }
+#sp-bar {
+  pointer-events: auto; margin: 8px auto 0; display: inline-flex; flex-wrap: wrap;
+  justify-content: center; align-items: center; gap: 5px;
+  background: rgba(6,10,11,.78); border-radius: 999px; padding: 5px 8px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); max-width: 100%;
+}
+.sp-btn {
+  border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.08); color: #fff;
+  border-radius: 999px; min-height: 30px; padding: 4px 9px; font-size: 12px; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+}
+.sp-btn:hover { background: rgba(255,255,255,.16); }
+.sp-btn[aria-pressed="true"] { background: #e44a2a; border-color: #e44a2a; color: #fff; }
+.sp-btn.sp-on { background: #0e7074; border-color: #0e7074; }
+.sp-select {
+  min-height: 30px; border-radius: 999px; border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.08); color: #fff; padding: 3px 6px; font-size: 12px; font-weight: 700;
+}
+.sp-select option { color: #111619; }
+
+#sp-word-card {
+  position: absolute; right: 14px; bottom: 86px; z-index: 64; width: min(330px, calc(100% - 28px));
+  background: #fff; color: #111619; border-radius: 16px; padding: 16px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.45); pointer-events: auto; text-align: left;
+}
+#sp-word-card[hidden] { display: none; }
+.sp-wc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.sp-wc-main { font-size: 28px; font-weight: 800; line-height: 1.2; }
+.sp-wc-reading { color: #0e7074; font-weight: 700; margin-top: 2px; font-size: 14px; }
+.sp-wc-pos { display: inline-block; margin-top: 9px; background: #dff2f1; color: #0e7074; border-radius: 999px; padding: 3px 8px; font-size: 11px; font-weight: 800; }
+.sp-wc-meaning { margin: 12px 0 14px; font-size: 14px; line-height: 1.5; }
+.sp-wc-meaning.unknown { color: #5c686e; }
+.sp-wc-close { border: 0; background: #f7f8f8; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 16px; flex: 0 0 auto; }
+.sp-wc-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.sp-wc-save { border: 0; background: #e44a2a; color: #fff; border-radius: 9px; padding: 8px 12px; font-weight: 800; cursor: pointer; font-size: 13px; }
+.sp-wc-save:disabled { opacity: .5; cursor: default; }
+#sp-panel {
+  position: fixed; top: 56px; right: 0; bottom: 0; width: min(390px, 94vw); z-index: 9999;
+  background: #fff; color: #111619; box-shadow: -14px 0 40px rgba(0,0,0,.25);
+  display: flex; flex-direction: column; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+}
+#sp-panel[hidden] { display: none; }
+.sp-panel-head { padding: 14px 14px 0; }
+.sp-panel-title { font-size: 16px; font-weight: 800; margin: 0; }
+.sp-panel-sub { color: #5c686e; font-size: 12px; margin: 4px 0 0; line-height: 1.45; }
+.sp-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 12px 8px 0; border-bottom: 1px solid #d6dcdf; }
+.sp-tab { border: 0; border-bottom: 3px solid transparent; background: transparent; padding: 9px 6px 8px; font-weight: 800; cursor: pointer; color: #5c686e; font-size: 13px; }
+.sp-tab[aria-selected="true"] { color: #111619; border-bottom-color: #e44a2a; }
+.sp-tools { padding: 11px 12px; border-bottom: 1px solid #d6dcdf; display: flex; gap: 8px; align-items: center; }
+.sp-search { flex: 1; min-width: 0; min-height: 36px; border: 1px solid #d6dcdf; border-radius: 9px; padding: 7px 10px; background: #f7f8f8; font-size: 13px; }
+.sp-count { color: #5c686e; font-size: 12px; white-space: nowrap; }
+.sp-list { overflow-y: auto; flex: 1; padding: 8px; min-height: 0; }
+.sp-cue { width: 100%; text-align: left; border: 0; background: transparent; border-radius: 10px; padding: 9px; cursor: pointer; display: grid; grid-template-columns: 46px minmax(0,1fr); gap: 9px; color: inherit; font-size: 13px; }
+.sp-cue:hover { background: #f7f8f8; }
+.sp-cue.active { background: #ffe8e1; }
+.sp-cue-time { color: #5c686e; font-size: 11px; font-variant-numeric: tabular-nums; padding-top: 2px; }
+.sp-cue-jp { font-weight: 700; line-height: 1.5; }
+.sp-cue-en { color: #5c686e; font-size: 12px; margin-top: 2px; line-height: 1.4; }
+.sp-empty { padding: 28px 18px; color: #5c686e; text-align: center; font-size: 13px; line-height: 1.5; }
+.sp-empty strong { display: block; color: #111619; margin-bottom: 6px; font-size: 15px; }
+.sp-vocab-bar { padding: 11px 12px; border-bottom: 1px solid #d6dcdf; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sp-vocab-bar p { margin: 0; color: #5c686e; font-size: 12px; }
+.sp-vocab-actions { display: flex; gap: 6px; }
+.sp-small-btn { border: 1px solid #d6dcdf; background: #fff; border-radius: 8px; padding: 6px 9px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.sp-small-btn:disabled { opacity: .45; cursor: default; }
+.sp-v-item { padding: 12px 10px; border-bottom: 1px solid #d6dcdf; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; }
+.sp-v-word { font-size: 19px; font-weight: 800; }
+.sp-v-reading { color: #0e7074; font-size: 12px; margin-left: 6px; font-weight: 700; }
+.sp-v-meaning { color: #5c686e; font-size: 13px; margin-top: 3px; line-height: 1.45; }
+.sp-v-context { color: #5c686e; font-size: 12px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-v-remove { border: 0; background: transparent; color: #5c686e; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 15px; }
+.sp-v-remove:hover { background: #f7f8f8; color: #e44a2a; }
+.sp-panel-close { position: absolute; top: 10px; right: 10px; border: 0; background: #f7f8f8; width: 32px; height: 32px; border-radius: 9px; cursor: pointer; font-size: 16px; }
+@media (max-width: 700px) {
+  #sp-overlay { bottom: 18%; width: 94%; }
+  #sp-word-card { bottom: 150px; }
+}
+
+/* Anywhere (2.0): subtitle picker menu */
+#sp-subs-menu {
+  position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%);
+  width: min(92%, 560px); max-height: 46%; overflow-y: auto; z-index: 65;
+  background: #fff; color: #111619; border-radius: 14px; padding: 12px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.45); pointer-events: auto;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; text-align: left;
+}
+#sp-subs-menu[hidden] { display: none; }
+.sp-subs-head { font-weight: 800; font-size: 13px; margin-bottom: 8px; }
+.sp-subs-hint { color: #5c686e; font-size: 12px; line-height: 1.5; margin: 6px 0; }
+.sp-subs-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid #eef1f2; }
+.sp-subs-url { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-subs-diag { white-space: pre-wrap; word-break: break-word; background: #f7f8f8; border: 1px solid #eef1f2; border-radius: 9px; padding: 8px 9px; font-size: 11px; line-height: 1.55; color: #39434a; margin-bottom: 6px; }
+.sp-subs-log { white-space: pre-wrap; word-break: break-word; background: #111619; color: #c8d4d8; border-radius: 9px; padding: 8px 9px; font-size: 10.5px; line-height: 1.55; margin-top: 8px; max-height: 150px; overflow-y: auto; }

@@ -1,0 +1,69 @@
+{
+  "action": {
+    "default_icon": {
+      "128": "icons/icon128.png",
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    },
+    "default_popup": "popup.html",
+    "default_title": "Study Player Anywhere"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "all_frames": true,
+      "css": [
+        "content.css"
+      ],
+      "js": [
+        "lib/kuromoji.js",
+        "content.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "all_frames": true,
+      "js": [
+        "injected.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ],
+  "description": "Adds furigana, clickable word lookup, line replay, and a study transcript on top of Japanese subtitles on almost any web video player. Load your own .srt/.vtt if a site hides its captions.",
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "icons": {
+    "128": "icons/icon128.png",
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png"
+  },
+  "manifest_version": 3,
+  "name": "Study Player Anywhere",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "version": "2.2.0",
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "resources": [
+        "dict/*",
+        "lib/kuromoji.js"
+      ]
+    }
+  ]
+}

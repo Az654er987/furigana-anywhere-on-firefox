@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Study Player</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="head">
+    <div class="logo" aria-hidden="true">&#12354;</div>
+    <div>
+      <h1>Study Player</h1>
+      <p>Furigana study layer for almost any web video. Open a video, press play, and load its Japanese subtitles.</p>
+    </div>
+  </header>
+
+  <div class="status" id="status">Checking this tab</div>
+
+  <div class="toggles">
+    <label class="row">
+      <span><strong> Study overlay</strong><small>Show furigana captions over the video</small></span>
+      <input type="checkbox" id="enabled">
+    </label>
+    <label class="row">
+      <span><strong>Furigana</strong><small>Readings over kanji</small></span>
+      <input type="checkbox" id="furigana">
+    </label>
+    <label class="row">
+      <span><strong>English line</strong><small>From the video's EN subtitle track, if it has one</small></span>
+      <input type="checkbox" id="translation">
+    </label>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" id="openPanel" type="button">Open transcript</button>
+    <button class="btn" id="exportBtn" type="button">Export saved words</button>
+  </div>
+
+  <p class="meta" id="vocabMeta">Saved words load from the video page.</p>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <ol>
+      <li>Open any site with a video player and press play.</li>
+      <li>If the player has Japanese captions, turn them on. Otherwise use <strong>Load sub</strong> on the video to add an .srt/.vtt file, or open <strong>Subs</strong> to pick a subtitle file the extension found on the page.</li>
+      <li>The study captions appear over the video. Tap any word to look it up.</li>
+      <li>Use Replay, Loop, and 0.5x-0.75x speed to shadow a line.</li>
+    </ol>
+    <p class="note">Works on YouTube plus most HTML5 players (Video.js, Plyr, JW Player and plain &lt;video&gt; sites). Subtitles burned into the picture and DRM-locked players cannot be read; for those, download the .srt separately and use Load sub. Everything runs locally; nothing is uploaded.</p>
+  </section>
+
+  <script src="popup.js"></script>
+</body>
+</html>
