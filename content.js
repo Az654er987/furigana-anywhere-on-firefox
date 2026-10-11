@@ -261,7 +261,15 @@
   function tokenize(text) {
     if (state.tokenCache.has(text)) return state.tokenCache.get(text);
     if (!state.tokenizer) return null;
-    try { var toks = state.tokenizer.tokenize(text); state.tokenCache.set(text, toks); return toks; }
+    try {
+      var toks = state.tokenizer.tokenize(text);
+      // Auto-captions often remove the pause between adjacent katakana words.
+      // IPADIC then returns the whole run as one unknown proper noun. Refine
+      // those conservative cases into useful click targets before rendering.
+      if (window.SPTokenRefiner) toks = window.SPTokenRefiner.refine(toks, state.tokenizer);
+      state.tokenCache.set(text, toks);
+      return toks;
+    }
     catch (e) { return null; }
   }
 

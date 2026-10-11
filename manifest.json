@@ -19,6 +19,7 @@
       ],
       "js": [
         "lib/kuromoji.js",
+        "lib/token-refiner.js",
         "content.js"
       ],
       "matches": [
@@ -54,7 +55,7 @@
     "activeTab",
     "scripting"
   ],
-  "version": "2.3.1",
+  "version": "2.3.2",
   "web_accessible_resources": [
     {
       "matches": [
