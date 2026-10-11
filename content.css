@@ -56,6 +56,11 @@
   background: rgba(255,255,255,.08); color: #fff; padding: 3px 6px; font-size: 12px; font-weight: 700;
 }
 .sp-select option { color: #111619; }
+.sp-minimize { min-width: 30px; padding-left: 8px; padding-right: 8px; font-size: 16px; line-height: 1; }
+#sp-root.sp-controls-collapsed #sp-status { display: none; }
+#sp-root.sp-controls-collapsed #sp-bar { margin-top: 5px; padding: 4px; }
+#sp-root.sp-controls-collapsed #sp-bar > :not(#sp-minimize) { display: none; }
+#sp-root.sp-controls-collapsed #sp-minimize { min-width: 0; padding: 5px 10px; font-size: 11px; }
 
 #sp-word-card {
   position: absolute; right: 14px; bottom: 86px; z-index: 64; width: min(330px, calc(100% - 28px));

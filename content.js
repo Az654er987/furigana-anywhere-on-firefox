@@ -21,7 +21,7 @@
     tokenizer: null, tokenCache: new Map(),
     jpCues: [], enCues: [], tracksSeen: [],
     activeIndex: -1, currentVideoId: "", selectedWord: null, vocab: [],
-    panelOpen: false, panelTab: "transcript",
+    panelOpen: false, panelTab: "transcript", controlsCollapsed: false,
     discovered: [], discoveredSet: {}, genericLoaded: false, videoCount: 0,
     diag: [], autoTried: {}, autoLoadedFrom: "", nativeInfo: [],
     dict: null, dictStatus: "loading", lastTok: null
@@ -303,6 +303,7 @@
           '<button class="sp-btn" id="sp-panel-btn" type="button">Transcript</button>' +
           '<button class="sp-btn" id="sp-load-sub" type="button" title="Load a local .srt, .vtt or .ass file">Load sub</button>' +
           '<button class="sp-btn" id="sp-subs-btn" type="button" aria-pressed="false">Subs</button>' +
+          '<button class="sp-btn sp-minimize" id="sp-minimize" type="button" aria-pressed="false" aria-label="Minimize controls" title="Minimize controls">&#8722;</button>' +
         '</div>' +
       '</div>' +
       '<aside id="sp-word-card" hidden>' +
@@ -330,11 +331,21 @@
   }
   function setStatus(kind, text) { if (statusEl) statusEl.textContent = text; if (dotEl) dotEl.className = "sp-dot" + (kind ? " " + kind : ""); }
   function applyToggles() {
-    if (root) { root.classList.toggle("sp-hide-furigana", !state.furigana); root.classList.toggle("sp-hide-translation", !state.translation); }
-    var f = document.getElementById("sp-furi"), e = document.getElementById("sp-en-toggle"), l = document.getElementById("sp-loop");
+    if (root) {
+      root.classList.toggle("sp-hide-furigana", !state.furigana);
+      root.classList.toggle("sp-hide-translation", !state.translation);
+      root.classList.toggle("sp-controls-collapsed", state.controlsCollapsed);
+    }
+    var f = document.getElementById("sp-furi"), e = document.getElementById("sp-en-toggle"), l = document.getElementById("sp-loop"), m = document.getElementById("sp-minimize");
     if (f) f.setAttribute("aria-pressed", String(state.furigana));
     if (e) e.setAttribute("aria-pressed", String(state.translation));
     if (l) l.setAttribute("aria-pressed", String(state.loop));
+    if (m) {
+      m.setAttribute("aria-pressed", String(state.controlsCollapsed));
+      m.setAttribute("aria-label", state.controlsCollapsed ? "Show controls" : "Minimize controls");
+      m.title = state.controlsCollapsed ? "Show controls" : "Minimize controls";
+      m.textContent = state.controlsCollapsed ? "Controls" : "−";
+    }
     document.body.classList.toggle("sp-native-off", !!state.enabled);
     if (overlay) overlay.style.display = state.enabled ? "" : "none";
     if (wordCard && !state.enabled) wordCard.hidden = true;
@@ -354,6 +365,11 @@
     root.querySelector("#sp-speed").addEventListener("change", function () { var v = videoEl(); if (v) v.playbackRate = Number(this.value); });
     root.querySelector("#sp-panel-btn").addEventListener("click", function () { togglePanel(); });
     root.querySelector("#sp-load-sub").addEventListener("click", function () { if (fileInputEl) fileInputEl.click(); });
+    root.querySelector("#sp-minimize").addEventListener("click", function () {
+      state.controlsCollapsed = !state.controlsCollapsed;
+      if (subsMenuEl) subsMenuEl.hidden = true;
+      applyToggles(); saveSettings();
+    });
     root.querySelector("#sp-subs-btn").addEventListener("click", function () {
       if (!subsMenuEl) return;
       subsMenuEl.hidden = !subsMenuEl.hidden;
@@ -802,7 +818,7 @@
   }
 
   function saveSettings() {
-    try { chrome.storage.local.set({ sp_settings: { enabled: state.enabled, furigana: state.furigana, translation: state.translation } }); } catch (e) {}
+    try { chrome.storage.local.set({ sp_settings: { enabled: state.enabled, furigana: state.furigana, translation: state.translation, controlsCollapsed: state.controlsCollapsed } }); } catch (e) {}
   }
   function loadPersisted() {
     try {
@@ -811,6 +827,7 @@
           state.enabled = res.sp_settings.enabled !== false;
           state.furigana = res.sp_settings.furigana !== false;
           state.translation = res.sp_settings.translation !== false;
+          state.controlsCollapsed = res.sp_settings.controlsCollapsed === true;
         }
         if (Array.isArray(res.sp_vocab)) state.vocab = res.sp_vocab;
         applyToggles(); renderVocab();
