@@ -351,7 +351,7 @@
   }
 
   /* ---------- DOM ---------- */
-  var root, overlay, jpEl, enEl, statusEl, dotEl, wordCard, panel, listEl, vocabListEl, fileInputEl, subsMenuEl;
+  var root, overlay, jpEl, enEl, statusEl, dotEl, wordCard, panel, listEl, vocabListEl, fileInputEl, subsMenuEl, minerPanel;
   function allVideos() { return Array.prototype.slice.call(document.querySelectorAll("video")); }
   function videoEl() {
     var vids = allVideos(); if (!vids.length) return null;
@@ -397,20 +397,6 @@
         '<button class="sp-wc-close" id="sp-wc-close" type="button" aria-label="Close">x</button></div>' +
         '<span class="sp-wc-pos" id="sp-wc-pos"></span><p class="sp-wc-meaning" id="sp-wc-meaning"></p>' +
         '<div class="sp-wc-actions"><button class="sp-wc-save" id="sp-wc-save" type="button">Save word</button></div>' +
-      '</aside>' +
-      '<aside id="sp-miner" hidden>' +
-        '<div class="sp-wc-head"><div><div class="sp-wc-main">Mine sentence</div><div class="sp-wc-reading" id="sp-mn-sub"></div></div>' +
-        '<button class="sp-wc-close" id="sp-mn-close" type="button" aria-label="Close">x</button></div>' +
-        '<div id="sp-mn-sent" class="sp-mn-sent"></div>' +
-        '<div id="sp-mn-words" class="sp-mn-words"></div>' +
-        '<div class="sp-subs-hint">pitch: 0 = flat, a number = the accented mora</div>' +
-        '<img id="sp-mn-shot" class="sp-mn-shot" alt="Video frame">' +
-        '<div class="sp-wc-actions">' +
-          '<button class="sp-wc-save" id="sp-mn-listen" type="button">Listen</button>' +
-          '<button class="sp-wc-save" id="sp-mn-anki" type="button">Send to Anki</button>' +
-          '<button class="sp-wc-save" id="sp-mn-csv" type="button">CSV</button>' +
-        '</div>' +
-        '<div id="sp-mn-msg" class="sp-subs-hint"></div>' +
       '</aside>';
     var fileInput = document.createElement("input");
     fileInput.type = "file"; fileInput.id = "sp-file"; fileInput.accept = ".srt,.vtt,.ass,.ssa,.txt"; fileInput.multiple = true; fileInput.hidden = true;
@@ -426,6 +412,7 @@
     fileInputEl = player.querySelector("#sp-file"); subsMenuEl = player.querySelector("#sp-subs-menu");
     bindBar();
     buildPanel();
+    buildMinerPanel();
     applyToggles();
     return true;
   }
@@ -449,6 +436,7 @@
     document.body.classList.toggle("sp-native-off", !!state.enabled);
     if (overlay) overlay.style.display = state.enabled ? "" : "none";
     if (wordCard && !state.enabled) wordCard.hidden = true;
+    if (minerPanel && !state.enabled) minerPanel.hidden = true;
     hideNativeTracks();
   }
   function hideNativeTracks() {
@@ -458,10 +446,6 @@
   function bindBar() {
     root.querySelector("#sp-replay").addEventListener("click", replay);
     root.querySelector("#sp-mine").addEventListener("click", openMiner);
-    root.querySelector("#sp-mn-close").addEventListener("click", closeMiner);
-    root.querySelector("#sp-mn-listen").addEventListener("click", minerListen);
-    root.querySelector("#sp-mn-anki").addEventListener("click", minerToAnki);
-    root.querySelector("#sp-mn-csv").addEventListener("click", minerToCsv);
     root.querySelector("#sp-prev").addEventListener("click", function () { seekLine(-1); });
     root.querySelector("#sp-next").addEventListener("click", function () { seekLine(1); });
     root.querySelector("#sp-loop").addEventListener("click", function () { state.loop = !state.loop; applyToggles(); saveSettings(); });
@@ -625,6 +609,33 @@
     panel.querySelector("#sp-view-t").hidden = tab !== "transcript";
     panel.querySelector("#sp-view-v").hidden = tab !== "vocab";
     if (tab === "vocab") renderVocab();
+  }
+  // v2.5.3: the sentence miner lives in its own fixed side window on
+  // document.body (like the transcript panel) instead of a card inside
+  // the player, so player sizing can never squeeze it.
+  function buildMinerPanel() {
+    if (document.getElementById("sp-miner-panel")) { minerPanel = document.getElementById("sp-miner-panel"); return; }
+    minerPanel = document.createElement("aside");
+    minerPanel.id = "sp-miner-panel"; minerPanel.hidden = true;
+    minerPanel.innerHTML =
+      '<div class="sp-mn-head"><div><div class="sp-panel-title">Mine sentence</div>' +
+      '<div class="sp-wc-reading" id="sp-mn-sub"></div></div>' +
+      '<button class="sp-wc-close" id="sp-mn-close" type="button" aria-label="Close">x</button></div>' +
+      '<div class="sp-mn-body">' +
+      '<div id="sp-mn-sent" class="sp-mn-sent"></div>' +
+      '<div id="sp-mn-words" class="sp-mn-words"></div>' +
+      '<div class="sp-subs-hint">pitch: 0 = flat, a number = the accented mora</div>' +
+      '<img id="sp-mn-shot" class="sp-mn-shot" alt="Video frame">' +
+      '<div class="sp-wc-actions">' +
+        '<button class="sp-wc-save" id="sp-mn-listen" type="button">Listen</button>' +
+        '<button class="sp-wc-save" id="sp-mn-anki" type="button">Send to Anki</button>' +
+        '<button class="sp-wc-save" id="sp-mn-csv" type="button">CSV</button>' +
+      '</div><div id="sp-mn-msg" class="sp-subs-hint"></div></div>';
+    document.body.appendChild(minerPanel);
+    minerPanel.querySelector("#sp-mn-close").addEventListener("click", closeMiner);
+    minerPanel.querySelector("#sp-mn-listen").addEventListener("click", minerListen);
+    minerPanel.querySelector("#sp-mn-anki").addEventListener("click", minerToAnki);
+    minerPanel.querySelector("#sp-mn-csv").addEventListener("click", minerToCsv);
   }
   function renderJapanese(text) {
     if (!jpEl) return;
@@ -843,7 +854,7 @@
      or CSV. Audio on the saved card is intentionally TTS-preview only;
      no show audio is ever recorded. */
   var minerCue = null, minerShot = null, minerTokens = [];
-  function minerEl() { return root ? root.querySelector("#sp-miner") : null; }
+  function minerEl() { return minerPanel || null; }
   function escapeHtml(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
@@ -895,6 +906,7 @@
     minerCue = cue; minerShot = null;
     var v = videoEl(); if (v && !v.paused) { try { v.pause(); } catch (e) {} }
     if (wordCard) wordCard.hidden = true;
+    togglePanel(false);
     mel.hidden = false;
     mel.querySelector("#sp-mn-sub").textContent = fmt(cue.start) + " - " + String(document.title || "").slice(0, 60);
     mel.querySelector("#sp-mn-msg").textContent = "";

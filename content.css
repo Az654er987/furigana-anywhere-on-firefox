@@ -72,14 +72,23 @@
   box-shadow: 0 18px 50px rgba(0,0,0,.45); pointer-events: auto; text-align: left;
 }
 #sp-word-card[hidden] { display: none; }
-/* v2.4.0 sentence miner card */
-#sp-miner {
-  position: absolute; right: 14px; bottom: 86px; z-index: 64; width: min(370px, calc(100% - 28px));
-  background: #fff; color: #111619; border-radius: 16px; padding: 16px;
-  box-shadow: 0 18px 50px rgba(0,0,0,.45); pointer-events: auto; text-align: left;
-  max-height: min(72vh, 560px); overflow-y: auto;
+/* v2.5.3: the sentence miner is a fixed side window like the transcript
+   panel, instead of a card inside the player, so player sizing can never
+   squeeze it. Opening it closes the transcript panel; one side window at
+   a time. */
+#sp-miner-panel {
+  position: fixed; top: 56px; right: 0; bottom: 0; width: min(400px, 94vw); z-index: 9999;
+  background: #fff; color: #111619; box-shadow: -14px 0 40px rgba(0,0,0,.25);
+  display: flex; flex-direction: column; text-align: left;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
 }
-#sp-miner[hidden] { display: none; }
+#sp-miner-panel[hidden] { display: none; }
+.sp-mn-head { padding: 14px 14px 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.sp-mn-body { overflow-y: auto; flex: 1; min-height: 0; padding: 2px 16px 16px; scrollbar-width: thin; scrollbar-color: #c9d2d6 transparent; }
+.sp-mn-body::-webkit-scrollbar { width: 10px; }
+.sp-mn-body::-webkit-scrollbar-track { background: transparent; }
+.sp-mn-body::-webkit-scrollbar-thumb { background: #c9d2d6; border-radius: 8px; border: 2px solid #fff; }
+.sp-mn-body::-webkit-scrollbar-thumb:hover { background: #a9b4b9; }
 .sp-mn-sent { font-size: 20px; font-weight: 700; line-height: 2; margin: 10px 0; }
 .sp-mn-words { display: flex; flex-direction: column; gap: 7px; margin: 8px 0 10px; }
 .sp-mn-word { display: flex; gap: 8px; align-items: baseline; font-size: 13px; line-height: 1.45; }
@@ -88,8 +97,8 @@
 .sp-mn-g { color: #3c464b; }
 .sp-mn-shot { width: 100%; border-radius: 10px; margin: 4px 0 10px; display: block; }
 .sp-mn-shot:not([src]) { display: none; }
-#sp-miner .sp-wc-actions { justify-content: flex-start; flex-wrap: wrap; }
-#sp-miner .sp-subs-hint { margin: 8px 0 0; }
+#sp-miner-panel .sp-wc-actions { justify-content: flex-start; flex-wrap: wrap; }
+#sp-miner-panel .sp-subs-hint { margin: 8px 0 0; }
 .sp-wc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sp-wc-main { font-size: 28px; font-weight: 800; line-height: 1.2; }
 .sp-wc-reading { color: #0e7074; font-weight: 700; margin-top: 2px; font-size: 14px; }
