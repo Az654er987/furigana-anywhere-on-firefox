@@ -36,6 +36,69 @@
   }
 
   function kataToHira(t) { return String(t || "").replace(/[\u30a1-\u30f6]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0x60); }); }
+  /* Hepburn romaji, ASCII only on purpose: no macrons, so "ou" stays "ou"
+     and nothing can turn into mojibake on fragile screens. */
+  var ROMAJI_TABLE = {
+    "あ":"a","い":"i","う":"u","え":"e","お":"o",
+    "か":"ka","き":"ki","く":"ku","け":"ke","こ":"ko",
+    "さ":"sa","し":"shi","す":"su","せ":"se","そ":"so",
+    "た":"ta","ち":"chi","つ":"tsu","て":"te","と":"to",
+    "な":"na","に":"ni","ぬ":"nu","ね":"ne","の":"no",
+    "は":"ha","ひ":"hi","ふ":"fu","へ":"he","ほ":"ho",
+    "ま":"ma","み":"mi","む":"mu","め":"me","も":"mo",
+    "や":"ya","ゆ":"yu","よ":"yo",
+    "ら":"ra","り":"ri","る":"ru","れ":"re","ろ":"ro",
+    "わ":"wa","ゐ":"wi","ゑ":"we","を":"wo","ん":"n",
+    "が":"ga","ぎ":"gi","ぐ":"gu","げ":"ge","ご":"go",
+    "ざ":"za","じ":"ji","ず":"zu","ぜ":"ze","ぞ":"zo",
+    "だ":"da","ぢ":"ji","づ":"zu","で":"de","ど":"do",
+    "ば":"ba","び":"bi","ぶ":"bu","べ":"be","ぼ":"bo",
+    "ぱ":"pa","ぴ":"pi","ぷ":"pu","ぺ":"pe","ぽ":"po",
+    "うぁ":"wha","うぃ":"wi","うぇ":"we","うぉ":"who",
+    "きゃ":"kya","きゅ":"kyu","きょ":"kyo",
+    "しゃ":"sha","しゅ":"shu","しょ":"sho",
+    "ちゃ":"cha","ちゅ":"chu","ちょ":"cho",
+    "にゃ":"nya","にゅ":"nyu","にょ":"nyo",
+    "ひゃ":"hya","ひゅ":"hyu","ひょ":"hyo",
+    "みゃ":"mya","みゅ":"myu","みょ":"myo",
+    "りゃ":"rya","りゅ":"ryu","りょ":"ryo",
+    "ぎゃ":"gya","ぎゅ":"gyu","ぎょ":"gyo",
+    "じゃ":"ja","じゅ":"ju","じょ":"jo",
+    "びゃ":"bya","びゅ":"byu","びょ":"byo",
+    "ぴゃ":"pya","ぴゅ":"pyu","ぴょ":"pyo",
+    "ぢゃ":"ja","ぢゅ":"ju","ぢょ":"jo",
+    "ふぁ":"fa","ふぃ":"fi","ふぇ":"fe","ふぉ":"fo",
+    "てぃ":"ti","でぃ":"di","とぅ":"tu","どぅ":"du",
+    "ゔ":"vu","ゔぁ":"va","ゔぃ":"vi","ゔぇ":"ve","ゔぉ":"vo",
+    "ぁ":"a","ぃ":"i","ぅ":"u","ぇ":"e","ぉ":"o",
+    "ゃ":"ya","ゅ":"yu","ょ":"yo"
+  };
+  function hiraToRomaji(t) {
+    t = String(t || "");
+    if (!t) return "";
+    var out = "", i = 0;
+    while (i < t.length) {
+      if (t[i] === "っ") { // sokuon: っか -> kka, っち -> tchi, っちゃ -> tcha, っし -> sshi
+        var nxt = ROMAJI_TABLE[t.slice(i + 1, i + 3)] || ROMAJI_TABLE[t[i + 1]] || "";
+        if (nxt) out += /^ch/.test(nxt) ? "t" : nxt[0];
+        i++;
+        continue;
+      }
+      var r = ROMAJI_TABLE[t.slice(i, i + 2)];
+      if (r !== undefined) { out += r; i += 2; continue; }
+      r = ROMAJI_TABLE[t[i]];
+      if (r !== undefined) {
+        if (t[i] === "ん" && /[あいうえおやゆよ]/.test(t[i + 1] || "")) out += "n'"; // ん before vowel/y
+        else out += r;
+        i++;
+        continue;
+      }
+      if (t[i] === "ー") { var m = out.match(/[aeiou]$/); if (m) out += m[0]; i++; continue; } // long vowel mark
+      out += t[i]; // unknown char: pass through
+      i++;
+    }
+    return out;
+  }
   function isKana(c) { return /[\u3040-\u30ff\u30fc]/.test(c || ""); }
   function hasKanji(t) { return /[\u3400-\u9fff\u3005]/.test(t || ""); }
   function cleanText(t) {
@@ -330,7 +393,7 @@
         '</div>' +
       '</div>' +
       '<aside id="sp-word-card" hidden>' +
-        '<div class="sp-wc-head"><div><div class="sp-wc-main" id="sp-wc-main"></div><div class="sp-wc-reading" id="sp-wc-reading"></div></div>' +
+        '<div class="sp-wc-head"><div><div class="sp-wc-main" id="sp-wc-main"></div><div class="sp-wc-reading" id="sp-wc-reading"></div><div class="sp-wc-romaji" id="sp-wc-romaji"></div></div>' +
         '<button class="sp-wc-close" id="sp-wc-close" type="button" aria-label="Close">x</button></div>' +
         '<span class="sp-wc-pos" id="sp-wc-pos"></span><p class="sp-wc-meaning" id="sp-wc-meaning"></p>' +
         '<div class="sp-wc-actions"><button class="sp-wc-save" id="sp-wc-save" type="button">Save word</button></div>' +
@@ -711,6 +774,11 @@
     };
     document.getElementById("sp-wc-main").textContent = base;
     document.getElementById("sp-wc-reading").textContent = state.selectedWord.reading;
+    // v2.5.1: romaji under the kana reading. Hidden when there is no kana reading.
+    var romajiEl = document.getElementById("sp-wc-romaji");
+    var readingKana = kataToHira(state.selectedWord.reading);
+    if (/^[぀-ヶー]+$/.test(readingKana)) { romajiEl.textContent = hiraToRomaji(readingKana); romajiEl.style.display = ""; }
+    else { romajiEl.textContent = ""; romajiEl.style.display = "none"; }
     document.getElementById("sp-wc-pos").textContent = state.selectedWord.pos;
     var mEl = document.getElementById("sp-wc-meaning");
     mEl.textContent = meaning;

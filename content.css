@@ -93,6 +93,7 @@
 .sp-wc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sp-wc-main { font-size: 28px; font-weight: 800; line-height: 1.2; }
 .sp-wc-reading { color: #0e7074; font-weight: 700; margin-top: 2px; font-size: 14px; }
+.sp-wc-romaji { color: #5c686e; font-weight: 700; margin-top: 2px; font-size: 13px; letter-spacing: .03em; }
 .sp-wc-pos { display: inline-block; margin-top: 9px; background: #dff2f1; color: #0e7074; border-radius: 999px; padding: 3px 8px; font-size: 11px; font-weight: 800; }
 .sp-wc-meaning { margin: 12px 0 14px; font-size: 14px; line-height: 1.5; }
 .sp-wc-meaning.unknown { color: #5c686e; }
