@@ -6,6 +6,13 @@ Everything runs locally in your browser, fully offline after the first load. No 
 
 **Why this exists:** good Japanese learning tools keep ending up behind weekly or monthly paywalls. This one is built in the open instead, with a little AI help, so anyone can use it, inspect it, and make it better.
 
+## Screenshots
+
+![Furigana overlay on a video](screenshots/overlay.jpg)
+![Tap any word for its reading, meaning, romaji, and pitch accent](screenshots/word-card.jpg)
+![Sentence miner: one click turns a line into an Anki flashcard](screenshots/miner.jpg)
+![Searchable transcript panel](screenshots/transcript.jpg)
+
 ## Install (Chrome, Edge, Brave, Arc)
 
 1. Unzip this package somewhere permanent (do not delete the folder afterward, the browser loads from it).
