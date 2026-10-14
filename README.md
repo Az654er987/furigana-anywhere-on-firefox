@@ -2,6 +2,8 @@
 
 A browser extension that turns Japanese subtitles into a study layer on **almost any web video player**: furigana over every line, tap-any-word readings and meanings, line replay and looping, slowdown controls, a searchable transcript, a saved-words list you can export, and one-click sentence mining into Anki flashcards.
 
+Version 2.5.2 fixes the transcript scrollbar: the list now has a bounded height so it scrolls with a visible scrollbar instead of growing past the panel.
+
 Version 2.5.1 adds romaji to the word card: tapping any word now shows its reading in plain ASCII romaji under the kana reading, handy while kana is still shaky. Long vowels stay written out (ou, not ō) so nothing can garble on odd screens.
 
 Version 2.5.0 upgrades the dictionary to the full JMdict: 465,845 lookup forms instead of 67,916, so far fewer tapped words come back with "no definition". Common words keep priority, so everything you already looked up still resolves the same way. The bigger file loads in the background like before and takes about a second to parse on first load.
@@ -62,7 +64,7 @@ Firefox: open `about:debugging#/runtime/this-firefox`, click **Load Temporary Ad
 
 ## Updating (do both reloads, or the old code keeps running)
 
-Chrome and Edge do not auto-update unpacked extensions. Unzip this version over (or next to) the old folder, open `chrome://extensions` (or `edge://extensions`), find **Study Player Anywhere**, click **Reload**, then reload the video tab too. Skipping either reload leaves the old code running. Your saved words carry over. This update takes the version to 2.5.1; the version on the extension card is the quickest way to confirm you are running it.
+Chrome and Edge do not auto-update unpacked extensions. Unzip this version over (or next to) the old folder, open `chrome://extensions` (or `edge://extensions`), find **Study Player Anywhere**, click **Reload**, then reload the video tab too. Skipping either reload leaves the old code running. Your saved words carry over. This update takes the version to 2.5.2; the version on the extension card is the quickest way to confirm you are running it.
 
 ## Known issues
 
@@ -73,7 +75,7 @@ Chrome and Edge do not auto-update unpacked extensions. Unzip this version over 
 ## Troubleshooting
 
 - **Still no subtitles**: open **Subs** on the video. The top box is the diagnostics readout: it shows the page, how many video players and player subtitle tracks were found (with their languages and line counts), which YouTube caption tracks exist, how many subtitle files were spotted, and a short log of what was fetched and what came back. Hit **Retry detection** after pressing play and turning the player's CC on. If you send anyone a bug report, that readout is the useful part.
-- **"Japanese track was empty" on YouTube**: fixed in 2.1.1. If you still see it, confirm the extension card says 2.5.1 and both reloads above were done, then try turning YouTube's own CC button on once and hitting **Retry detection** in **Subs**.
+- **"Japanese track was empty" on YouTube**: fixed in 2.1.1. If you still see it, confirm the extension card says 2.5.2 and both reloads above were done, then try turning YouTube's own CC button on once and hitting **Retry detection** in **Subs**.
 - **Furigana missing but subtitles show**: give the first video a few seconds, check the small status pill under the caption, and reload the page once. The dictionary is about 17 MB unpacked, so a slow disk can take a moment.
 - **Nothing appears at all**: confirm Developer mode is still on, the extension is enabled at `chrome://extensions`, that the video has actually started, then reload the page. Some sites build their player late; Study Player keeps watching and attaches when a video shows up.
 - **Overlay sits in the wrong place**: it anchors to the player's container. Going fullscreen with the player's own fullscreen button usually fixes positioning; one page reload clears anything stuck.
@@ -85,7 +87,7 @@ The extension runs on pages you visit so it can find video players, but it does 
 
 ## Files
 
-- `manifest.json` - extension definition (Manifest V3, all-sites, version 2.5.1)
+- `manifest.json` - extension definition (Manifest V3, all-sites, version 2.5.2)
 - `content.js` / `content.css` - the overlay, transcript, dictionary UI, subtitle parsers (VTT/SRT/ASS, YouTube XML and json3, HLS playlists), native-track reader, auto-loader, diagnostics, sentence miner, and local file loader
 - `injected.js` - page-world helper installed before the player boots: reads YouTube's caption list, and on other sites notices subtitle files and streaming playlists the player fetches (declared in `manifest.json` as a `world: "MAIN"` content script, so no inline script injection is needed)
 - `popup.html` / `popup.js` / `popup.css` - toolbar popup with toggles, status, and CSV export

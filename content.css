@@ -116,7 +116,13 @@
 .sp-tools { padding: 11px 12px; border-bottom: 1px solid #d6dcdf; display: flex; gap: 8px; align-items: center; }
 .sp-search { flex: 1; min-width: 0; min-height: 36px; border: 1px solid #d6dcdf; border-radius: 9px; padding: 7px 10px; background: #f7f8f8; font-size: 13px; }
 .sp-count { color: #5c686e; font-size: 12px; white-space: nowrap; }
-.sp-list { overflow-y: auto; flex: 1; padding: 8px; min-height: 0; }
+.sp-list { overflow-y: auto; flex: 1; padding: 8px; min-height: 0; scrollbar-width: thin; scrollbar-color: #c9d2d6 transparent; }
+.sp-list::-webkit-scrollbar { width: 10px; }
+.sp-list::-webkit-scrollbar-track { background: transparent; }
+.sp-list::-webkit-scrollbar-thumb { background: #c9d2d6; border-radius: 8px; border: 2px solid #fff; }
+.sp-list::-webkit-scrollbar-thumb:hover { background: #a9b4b9; }
+#sp-view-t, #sp-view-v { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#sp-view-v[hidden] { display: none; }
 .sp-cue { width: 100%; text-align: left; border: 0; background: transparent; border-radius: 10px; padding: 9px; cursor: pointer; display: grid; grid-template-columns: 46px minmax(0,1fr); gap: 9px; color: inherit; font-size: 13px; }
 .sp-cue:hover { background: #f7f8f8; }
 .sp-cue.active { background: #ffe8e1; }
