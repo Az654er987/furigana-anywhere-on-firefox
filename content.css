@@ -58,11 +58,12 @@
 .sp-select option { color: #111619; }
 .sp-minimize { min-width: 30px; padding-left: 8px; padding-right: 8px; font-size: 16px; line-height: 1; }
 #sp-root.sp-controls-collapsed #sp-status { display: none; }
-/* v2.3.3: when minimized, the whole menu collapses into a small Controls
-   button parked in the lower-right corner of the player, above the
-   native controls. */
-#sp-root.sp-controls-collapsed #sp-overlay { left: auto; right: 12px; bottom: 64px; transform: none; width: auto; }
-#sp-root.sp-controls-collapsed #sp-bar { margin: 0; padding: 4px; }
+/* v2.5.4: when minimized, only the control bar parks in the corner. The
+   overlay spans the whole player so the captions stay centered at the
+   bottom instead of moving with the bar. */
+#sp-root.sp-controls-collapsed #sp-overlay { left: 0; right: 0; top: 0; bottom: 0; transform: none; width: auto; }
+#sp-root.sp-controls-collapsed #sp-caption-box { position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%); width: min(92%, 980px); }
+#sp-root.sp-controls-collapsed #sp-bar { position: absolute; right: 12px; bottom: 64px; margin: 0; padding: 4px; }
 #sp-root.sp-controls-collapsed #sp-bar > :not(#sp-minimize) { display: none; }
 #sp-root.sp-controls-collapsed #sp-minimize { min-width: 0; padding: 6px 12px; font-size: 11px; }
 
