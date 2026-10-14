@@ -48,7 +48,9 @@
     if (/WEBVTT/.test(head)) return true;
     if (/#EXTM3U/.test(head) && (/TYPE=SUBTITLES/i.test(text.slice(0, 4000)) || /\.vtt([?#\s]|$)/im.test(text.slice(0, 4000)))) return true;
     if (/^\s*<\?xml[\s\S]{0,400}<transcript[\s>]/i.test(text.slice(0, 900))) return true;
-    if (/"wireMagic"\s*:\s*"PBJ"|"events"\s*:\s*\[[\s\S]{0,200}"tStartMs"/.test(head)) return true;
+    // v2.3.4: YouTube sends wireMagic as lowercase "pbj1", not "PBJ".
+    // The old uppercase-only sniff silently dropped every timedtext body.
+    if (/"wireMagic"\s*:\s*"pbj/i.test(head) || /"events"\s*:\s*\[[\s\S]{0,200}"tStartMs"/.test(head)) return true;
     if (/\d{1,2}:\d{2}:\d{2}[.,]\d{1,3}\s*-->/.test(text.slice(0, 4000))) return true;
     if (/^Dialogue:/m.test(text.slice(0, 4000))) return true;
     if (/^\[Script Info\]/m.test(head)) return true;

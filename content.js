@@ -102,6 +102,7 @@
   }
   function ingestCues(cues, lang, label) {
     if (!cues || !cues.length) return false;
+    clearLoadingWatchdog();
     if (lang === "en") { state.enCues = cues; }
     else { state.jpCues = cues; state.genericLoaded = true; state.tokenCache.clear(); }
     state.activeIndex = -1;
@@ -230,9 +231,22 @@
     renderSubsMenu();
     if (!state.jpCues.length) {
       setStatus("", "Subtitle file found - loading it now. Subs lists everything found.");
+      armLoadingWatchdog();
       maybeAutoLoad(full);
     }
   }
+  // v2.3.4: the "loading it now" pill used to hang forever when a discovered
+  // URL was skipped by maybeAutoLoad and no text ever arrived. If nothing
+  // loads within 15s, say so instead of spinning silently.
+  var loadingWatchdog = null;
+  function armLoadingWatchdog() {
+    if (loadingWatchdog) clearTimeout(loadingWatchdog);
+    loadingWatchdog = setTimeout(function () {
+      loadingWatchdog = null;
+      if (!state.jpCues.length) setStatus("warn", "Subtitle file found but nothing loaded yet. Check Subs, or use Load sub.");
+    }, 15000);
+  }
+  function clearLoadingWatchdog() { if (loadingWatchdog) { clearTimeout(loadingWatchdog); loadingWatchdog = null; } }
   function rubyParts(surface, reading) {
     var hr = kataToHira(reading);
     if (!hasKanji(surface) || !hr || reading === "*") return null;
@@ -303,6 +317,7 @@
         '<div id="sp-bar">' +
           '<button class="sp-btn" id="sp-prev" type="button" title="Previous line">|&#9664;</button>' +
           '<button class="sp-btn" id="sp-replay" type="button">Replay</button>' +
+          '<button class="sp-btn" id="sp-mine" type="button" title="Mine this line into a flashcard">Mine</button>' +
           '<button class="sp-btn" id="sp-next" type="button" title="Next line">&#9654;|</button>' +
           '<button class="sp-btn" id="sp-loop" type="button" aria-pressed="false">Loop</button>' +
           '<button class="sp-btn" id="sp-furi" type="button" aria-pressed="true">Furigana</button>' +
@@ -319,6 +334,20 @@
         '<button class="sp-wc-close" id="sp-wc-close" type="button" aria-label="Close">x</button></div>' +
         '<span class="sp-wc-pos" id="sp-wc-pos"></span><p class="sp-wc-meaning" id="sp-wc-meaning"></p>' +
         '<div class="sp-wc-actions"><button class="sp-wc-save" id="sp-wc-save" type="button">Save word</button></div>' +
+      '</aside>' +
+      '<aside id="sp-miner" hidden>' +
+        '<div class="sp-wc-head"><div><div class="sp-wc-main">Mine sentence</div><div class="sp-wc-reading" id="sp-mn-sub"></div></div>' +
+        '<button class="sp-wc-close" id="sp-mn-close" type="button" aria-label="Close">x</button></div>' +
+        '<div id="sp-mn-sent" class="sp-mn-sent"></div>' +
+        '<div id="sp-mn-words" class="sp-mn-words"></div>' +
+        '<div class="sp-subs-hint">pitch: 0 = flat, a number = the accented mora</div>' +
+        '<img id="sp-mn-shot" class="sp-mn-shot" alt="Video frame">' +
+        '<div class="sp-wc-actions">' +
+          '<button class="sp-wc-save" id="sp-mn-listen" type="button">Listen</button>' +
+          '<button class="sp-wc-save" id="sp-mn-anki" type="button">Send to Anki</button>' +
+          '<button class="sp-wc-save" id="sp-mn-csv" type="button">CSV</button>' +
+        '</div>' +
+        '<div id="sp-mn-msg" class="sp-subs-hint"></div>' +
       '</aside>';
     var fileInput = document.createElement("input");
     fileInput.type = "file"; fileInput.id = "sp-file"; fileInput.accept = ".srt,.vtt,.ass,.ssa,.txt"; fileInput.multiple = true; fileInput.hidden = true;
@@ -365,6 +394,11 @@
   }
   function bindBar() {
     root.querySelector("#sp-replay").addEventListener("click", replay);
+    root.querySelector("#sp-mine").addEventListener("click", openMiner);
+    root.querySelector("#sp-mn-close").addEventListener("click", closeMiner);
+    root.querySelector("#sp-mn-listen").addEventListener("click", minerListen);
+    root.querySelector("#sp-mn-anki").addEventListener("click", minerToAnki);
+    root.querySelector("#sp-mn-csv").addEventListener("click", minerToCsv);
     root.querySelector("#sp-prev").addEventListener("click", function () { seekLine(-1); });
     root.querySelector("#sp-next").addEventListener("click", function () { seekLine(1); });
     root.querySelector("#sp-loop").addEventListener("click", function () { state.loop = !state.loop; applyToggles(); saveSettings(); });
@@ -423,6 +457,21 @@
     });
     var retryHint = document.createElement("span"); retryHint.className = "sp-subs-url"; retryHint.textContent = "Re-scan player, network log below";
     retryRow.appendChild(retryHint); retryRow.appendChild(retryBtn);
+    // v2.3.4: one-tap copy of the diagnostics readout for bug reports.
+    var copyBtn = document.createElement("button"); copyBtn.type = "button"; copyBtn.className = "sp-small-btn"; copyBtn.textContent = "Copy diagnostics";
+    copyBtn.addEventListener("click", function () {
+      var txt = diagBox.textContent + "\n---\n" + (state.diag || []).slice(0, 10).join("\n");
+      function done(ok) { copyBtn.textContent = ok ? "Copied" : "Copy failed"; setTimeout(function () { copyBtn.textContent = "Copy diagnostics"; }, 1500); }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { done(true); }, function () { done(false); });
+        else {
+          var ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select();
+          var ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
+          document.body.removeChild(ta); done(ok);
+        }
+      } catch (e) { done(false); }
+    });
+    retryRow.appendChild(copyBtn);
     subsMenuEl.appendChild(retryRow);
     if (!state.discovered.length) {
       var hint = document.createElement("p"); hint.className = "sp-subs-hint";
@@ -718,6 +767,184 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
+
+  /* ---------- Sentence miner (v2.4.0) ----------
+     One-click flashcard mining from the current subtitle line:
+     sentence + furigana, per-word glosses, pitch accent, a video-frame
+     screenshot, TTS listen-back, and export to Anki (via AnkiConnect)
+     or CSV. Audio on the saved card is intentionally TTS-preview only;
+     no show audio is ever recorded. */
+  var minerCue = null, minerShot = null, minerTokens = [];
+  function minerEl() { return root ? root.querySelector("#sp-miner") : null; }
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  // Pitch accent data (Kanjium-derived, see README), lazy-loaded so the
+  // base extension never pays for it until the miner opens.
+  var pitchData = null, pitchPromise = null;
+  function loadPitch() {
+    if (pitchData) return Promise.resolve(pitchData);
+    if (pitchPromise) return pitchPromise;
+    pitchPromise = fetch(chrome.runtime.getURL("dict/pitch.json"))
+      .then(function (r) { if (!r.ok) throw new Error("no pitch data"); return r.json(); })
+      .then(function (d) { pitchData = d || {}; return pitchData; })
+      .catch(function () { pitchData = {}; return pitchData; });
+    return pitchPromise;
+  }
+  function pitchFor(word, readingHira) {
+    if (!pitchData || !word) return "";
+    var arr = pitchData[word];
+    if (!arr || !arr.length) return "";
+    for (var i = 0; i < arr.length; i++) if (!readingHira || arr[i][0] === readingHira) return arr[i][1];
+    return arr[0][1];
+  }
+  function minerRubyInto(el, toks) {
+    // Same ruby rendering as the caption overlay, as static spans.
+    el.innerHTML = "";
+    toks.forEach(function (tok) {
+      var parts = rubyParts(tok.surface_form, tok.reading);
+      if (parts) {
+        el.appendChild(document.createTextNode(parts.prefix));
+        var ruby = document.createElement("ruby");
+        ruby.appendChild(document.createTextNode(parts.base));
+        var rt = document.createElement("rt"); rt.textContent = parts.ruby;
+        ruby.appendChild(rt);
+        el.appendChild(ruby);
+        el.appendChild(document.createTextNode(parts.suffix));
+      } else el.appendChild(document.createTextNode(tok.surface_form));
+    });
+  }
+  function openMiner() {
+    var mel = minerEl(); if (!mel) return;
+    var cue = state.activeIndex >= 0 ? state.jpCues[state.activeIndex] : null;
+    if (!cue && state.jpCues.length) {
+      var v0 = videoEl();
+      if (v0) { var idx = findCue(state.jpCues, v0.currentTime); if (idx >= 0) cue = state.jpCues[idx]; }
+    }
+    if (!cue) { setStatus("warn", "No subtitle line under the playhead to mine yet."); return; }
+    minerCue = cue; minerShot = null;
+    var v = videoEl(); if (v && !v.paused) { try { v.pause(); } catch (e) {} }
+    if (wordCard) wordCard.hidden = true;
+    mel.hidden = false;
+    mel.querySelector("#sp-mn-sub").textContent = fmt(cue.start) + " - " + String(document.title || "").slice(0, 60);
+    mel.querySelector("#sp-mn-msg").textContent = "";
+    minerTokens = tokenize(cue.text) || [];
+    var sentEl = mel.querySelector("#sp-mn-sent");
+    if (minerTokens.length) minerRubyInto(sentEl, minerTokens);
+    else sentEl.textContent = cue.text;
+    var wordsEl = mel.querySelector("#sp-mn-words");
+    wordsEl.innerHTML = "";
+    loadPitch().then(function () {
+      var seen = {}, any = false;
+      minerTokens.forEach(function (tok) {
+        var surf = tok.surface_form;
+        if (!hasKanji(surf) || seen[surf]) return;
+        seen[surf] = 1; any = true;
+        var reading = (tok.reading && tok.reading !== "*") ? kataToHira(tok.reading) : "";
+        var base = (tok.basic_form && tok.basic_form !== "*") ? tok.basic_form : surf;
+        var hit = lookupWord(base, surf, reading);
+        var pitch = pitchFor(surf, reading) || pitchFor(base, reading);
+        var row = document.createElement("div"); row.className = "sp-mn-word";
+        var w = document.createElement("span"); w.className = "sp-mn-w"; w.textContent = surf;
+        var r = document.createElement("span"); r.className = "sp-mn-r";
+        r.textContent = reading + (pitch !== "" ? " [" + pitch + "]" : "");
+        var g = document.createElement("span"); g.className = "sp-mn-g";
+        g.textContent = hit ? hit.meaning : "(no definition)";
+        row.appendChild(w); row.appendChild(r); row.appendChild(g);
+        wordsEl.appendChild(row);
+      });
+      if (!any) wordsEl.innerHTML = '<div class="sp-subs-hint">No kanji words in this line.</div>';
+    });
+    var shotImg = mel.querySelector("#sp-mn-shot");
+    shotImg.removeAttribute("src"); shotImg.style.display = "none";
+    try {
+      chrome.runtime.sendMessage({ type: "SP_MINER_SHOT" }, function (resp) {
+        if (resp && resp.ok && resp.dataUrl) {
+          minerShot = resp.dataUrl;
+          shotImg.src = resp.dataUrl;
+          shotImg.style.display = "";
+        }
+      });
+    } catch (e) {}
+  }
+  function closeMiner() {
+    var mel = minerEl(); if (mel) mel.hidden = true;
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
+  }
+  function minerListen() {
+    if (!minerCue) return;
+    try {
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(minerCue.text);
+      u.lang = "ja-JP"; u.rate = 0.85;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function minerCardFields() {
+    if (!minerCue) return null;
+    var reading = minerTokens.map(function (t) {
+      return (t.reading && t.reading !== "*") ? kataToHira(t.reading) : t.surface_form;
+    }).join("");
+    var glosses = [], seen = {};
+    minerTokens.forEach(function (t) {
+      var surf = t.surface_form;
+      if (!hasKanji(surf) || seen[surf]) return;
+      seen[surf] = 1;
+      var rd = (t.reading && t.reading !== "*") ? kataToHira(t.reading) : "";
+      var base = (t.basic_form && t.basic_form !== "*") ? t.basic_form : surf;
+      var hit = lookupWord(base, surf, rd);
+      if (hit) glosses.push(surf + " [" + (rd || hit.reading || "") + "]: " + hit.meaning);
+    });
+    return {
+      sentence: minerCue.text,
+      reading: reading,
+      glosses: glosses,
+      time: fmt(minerCue.start),
+      title: String(document.title || "")
+    };
+  }
+  function minerToAnki() {
+    var mel = minerEl(); if (!mel) return;
+    var msgEl = mel.querySelector("#sp-mn-msg");
+    var f = minerCardFields(); if (!f) return;
+    msgEl.textContent = "Contacting AnkiConnect on your machine...";
+    var back = escapeHtml(f.reading) + "<br><br>" +
+      f.glosses.map(escapeHtml).join("<br>") +
+      "<br><br><small>" + escapeHtml(f.title) + " - " + escapeHtml(f.time) + "</small>";
+    var note = {
+      deckName: "Default",
+      modelName: "Basic",
+      fields: { Front: escapeHtml(f.sentence), Back: back },
+      options: { allowDuplicate: false },
+      tags: ["furigana-anywhere"]
+    };
+    if (minerShot && minerShot.indexOf(",") > 0) {
+      note.picture = [{ data: minerShot.split(",")[1], filename: "fa_mine_" + Date.now() + ".jpg", fields: ["Back"] }];
+    }
+    fetch("http://127.0.0.1:8765", {
+      method: "POST",
+      body: JSON.stringify({ action: "addNote", version: 6, params: { note: note } })
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j && j.error) msgEl.textContent = "Anki said: " + j.error;
+      else { msgEl.textContent = "Sent to Anki."; closeMiner(); }
+    }).catch(function () {
+      msgEl.textContent = "AnkiConnect is not reachable. Open Anki with the AnkiConnect add-on installed, or use CSV instead.";
+    });
+  }
+  function minerToCsv() {
+    var mel = minerEl();
+    var f = minerCardFields(); if (!f) return;
+    var rows = [["sentence", "reading", "words", "time", "video"]];
+    rows.push([f.sentence, f.reading, f.glosses.join(" | "), f.time, f.title]);
+    var csv = "\uFEFF" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
+    var url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    var a = document.createElement("a"); a.href = url; a.download = "mined-sentence.csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    if (mel) mel.querySelector("#sp-mn-msg").textContent = "CSV downloaded.";
+  }
   /* ---------- Captions ---------- */
   function pickTrack(tracks, lang) {
     var exact = tracks.filter(function (t) { return t.languageCode === lang; });
@@ -836,7 +1063,18 @@
 
   /* ---------- Video wiring ---------- */
   var wiredVideo = null, rafId = 0;
-  function tick() { updateForTime(false); if (wiredVideo && !wiredVideo.paused && !wiredVideo.ended) rafId = requestAnimationFrame(tick); }
+  function tick() {
+    updateForTime(false);
+    // v2.3.4: YouTube sometimes swaps the <video> element mid-playback
+    // (ad transitions, quality changes). The old element goes paused, the
+    // rAF loop below stops scheduling itself, and the new element never
+    // fires "play" because it is already playing, so captions froze.
+    // Re-wire to the live element and keep the loop alive.
+    var cur = videoEl();
+    if (cur && cur !== wiredVideo) wireVideo();
+    cur = wiredVideo;
+    if (cur && !cur.paused && !cur.ended) rafId = requestAnimationFrame(tick);
+  }
   function wireVideo() {
     var v = videoEl(); if (!v || v === wiredVideo) return;
     wiredVideo = v;
@@ -845,6 +1083,9 @@
     v.addEventListener("seeked", function () { updateForTime(true); });
     v.addEventListener("timeupdate", function () { updateForTime(false); });
     try { v.playbackRate = Number((document.getElementById("sp-speed") || {}).value || 1); } catch (e) {}
+    // v2.3.4: a freshly swapped-in element is already playing, so no "play"
+    // event will arrive. Kick the caption loop directly.
+    if (!v.paused && !v.ended) { cancelAnimationFrame(rafId); tick(); }
   }
 
   function saveSettings() {

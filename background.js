@@ -18,6 +18,18 @@ chrome.runtime.onInstalled.addListener(function (details) {
 });
 
 chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
+  if (msg && msg.type === "SP_MINER_SHOT") {
+    // v2.4.0 sentence miner: capture the visible tab as the card image.
+    // Covered by the existing activeTab + <all_urls> host permissions;
+    // no new permissions needed.
+    try {
+      chrome.tabs.captureVisibleTab(null, { format: "jpeg", quality: 70 }, function (dataUrl) {
+        if (chrome.runtime.lastError) sendResponse({ ok: false, error: String(chrome.runtime.lastError.message || chrome.runtime.lastError) });
+        else sendResponse({ ok: !!dataUrl, dataUrl: dataUrl || "" });
+      });
+    } catch (e) { sendResponse({ ok: false, error: String(e && e.message || e) }); }
+    return true; // async sendResponse
+  }
   if (!msg || msg.type !== "SP_FETCH_TEXT" || !msg.url) return false;
   var url = String(msg.url);
   // Only http(s) subtitle fetches are proxied.

@@ -58,9 +58,13 @@
 .sp-select option { color: #111619; }
 .sp-minimize { min-width: 30px; padding-left: 8px; padding-right: 8px; font-size: 16px; line-height: 1; }
 #sp-root.sp-controls-collapsed #sp-status { display: none; }
-#sp-root.sp-controls-collapsed #sp-bar { margin-top: 5px; padding: 4px; }
+/* v2.3.3: when minimized, the whole menu collapses into a small Controls
+   button parked in the lower-right corner of the player, above the
+   native controls. */
+#sp-root.sp-controls-collapsed #sp-overlay { left: auto; right: 12px; bottom: 64px; transform: none; width: auto; }
+#sp-root.sp-controls-collapsed #sp-bar { margin: 0; padding: 4px; }
 #sp-root.sp-controls-collapsed #sp-bar > :not(#sp-minimize) { display: none; }
-#sp-root.sp-controls-collapsed #sp-minimize { min-width: 0; padding: 5px 10px; font-size: 11px; }
+#sp-root.sp-controls-collapsed #sp-minimize { min-width: 0; padding: 6px 12px; font-size: 11px; }
 
 #sp-word-card {
   position: absolute; right: 14px; bottom: 86px; z-index: 64; width: min(330px, calc(100% - 28px));
@@ -68,6 +72,24 @@
   box-shadow: 0 18px 50px rgba(0,0,0,.45); pointer-events: auto; text-align: left;
 }
 #sp-word-card[hidden] { display: none; }
+/* v2.4.0 sentence miner card */
+#sp-miner {
+  position: absolute; right: 14px; bottom: 86px; z-index: 64; width: min(370px, calc(100% - 28px));
+  background: #fff; color: #111619; border-radius: 16px; padding: 16px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.45); pointer-events: auto; text-align: left;
+  max-height: min(72vh, 560px); overflow-y: auto;
+}
+#sp-miner[hidden] { display: none; }
+.sp-mn-sent { font-size: 20px; font-weight: 700; line-height: 2; margin: 10px 0; }
+.sp-mn-words { display: flex; flex-direction: column; gap: 7px; margin: 8px 0 10px; }
+.sp-mn-word { display: flex; gap: 8px; align-items: baseline; font-size: 13px; line-height: 1.45; }
+.sp-mn-w { font-weight: 800; white-space: nowrap; }
+.sp-mn-r { color: #0e7074; font-weight: 700; white-space: nowrap; }
+.sp-mn-g { color: #3c464b; }
+.sp-mn-shot { width: 100%; border-radius: 10px; margin: 4px 0 10px; display: block; }
+.sp-mn-shot:not([src]) { display: none; }
+#sp-miner .sp-wc-actions { justify-content: flex-start; flex-wrap: wrap; }
+#sp-miner .sp-subs-hint { margin: 8px 0 0; }
 .sp-wc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sp-wc-main { font-size: 28px; font-weight: 800; line-height: 1.2; }
 .sp-wc-reading { color: #0e7074; font-weight: 700; margin-top: 2px; font-size: 14px; }

@@ -1,6 +1,10 @@
 # Study Player Anywhere
 
-A browser extension that turns Japanese subtitles into a study layer on **almost any web video player**: furigana over every line, tap-any-word readings and meanings, line replay and looping, slowdown controls, a searchable transcript, and a saved-words list you can export.
+A browser extension that turns Japanese subtitles into a study layer on **almost any web video player**: furigana over every line, tap-any-word readings and meanings, line replay and looping, slowdown controls, a searchable transcript, a saved-words list you can export, and one-click sentence mining into Anki flashcards.
+
+Version 2.4.0 adds the **sentence miner**: press **Mine** on the control bar to turn the current subtitle line into a flashcard. The miner shows the sentence with furigana, every kanji word with its reading, meaning, and pitch accent (0 = flat, the number = the accented mora), a screenshot of the video frame, and a listen-back button using your browser's Japanese voice. **Send to Anki** pushes the card (with the screenshot) straight into Anki through the free AnkiConnect add-on; **CSV** downloads the same card as a spreadsheet row. No show audio is ever recorded. This version also folds in the fixes from the unreleased 2.3.3 and 2.3.4 builds: the minimized menu now parks as a small **Controls** button in the lower-right corner of the player, the caption sniffing recognizes YouTube's lowercase timedtext responses, the "loading it now" pill can no longer hang forever, the caption loop survives YouTube swapping the video element, and the **Subs** panel has a **Copy diagnostics** button for bug reports.
+
+> **Testing warning:** this update bundles many fixes at once (the unreleased 2.3.3 and 2.3.4 changes plus the brand-new sentence miner). It is being actively tested and may introduce new bugs. If something breaks, the **Copy diagnostics** button in **Subs** captures everything useful for a bug report.
 
 Version 2.3.2 improves click-target grouping in auto-generated YouTube captions. YouTube often removes pauses and spaces, and the tokenizer could treat several adjacent katakana words as one giant name. The extension now conservatively recovers strong dictionary word boundaries inside those runs, so text such as `ダイナミックチャーシューダイナミック` becomes three useful click targets instead of one.
 
@@ -54,17 +58,18 @@ Firefox: open `about:debugging#/runtime/this-firefox`, click **Load Temporary Ad
 
 ## Updating (do both reloads, or the old code keeps running)
 
-Chrome and Edge do not auto-update unpacked extensions. Unzip this version over (or next to) the old folder, open `chrome://extensions` (or `edge://extensions`), find **Study Player Anywhere**, click **Reload**, then reload the video tab too. Skipping either reload leaves the old code running. Your saved words carry over. This update takes the version to 2.3.2; the version on the extension card is the quickest way to confirm you are running it.
+Chrome and Edge do not auto-update unpacked extensions. Unzip this version over (or next to) the old folder, open `chrome://extensions` (or `edge://extensions`), find **Study Player Anywhere**, click **Reload**, then reload the video tab too. Skipping either reload leaves the old code running. Your saved words carry over. This update takes the version to 2.4.0; the version on the extension card is the quickest way to confirm you are running it.
 
 ## Known issues
 
 - YouTube auto-captions are machine-generated run-on text. Version 2.3.2 improves long katakana boundaries, but unusual names, speech-recognition mistakes, and ambiguous grammar can still be grouped incorrectly.
-- On some auto-caption videos the first line can remain frozen or plain until the furigana engine finishes or the page is reloaded. The delayed-player fix in 2.3.1 improved this but did not eliminate it, and the remaining timing path is still under investigation.
+- On some auto-caption videos the first line can remain frozen or plain until the furigana engine finishes or the page is reloaded. Versions 2.3.1 and 2.4.0 each fixed one timing path behind this; if you still see it, the **Copy diagnostics** button in **Subs** captures everything useful for a bug report.
+- **Send to Anki** needs the free AnkiConnect add-on installed in Anki and Anki itself open. If it cannot reach Anki, the miner says so and offers CSV instead.
 
 ## Troubleshooting
 
 - **Still no subtitles**: open **Subs** on the video. The top box is the diagnostics readout: it shows the page, how many video players and player subtitle tracks were found (with their languages and line counts), which YouTube caption tracks exist, how many subtitle files were spotted, and a short log of what was fetched and what came back. Hit **Retry detection** after pressing play and turning the player's CC on. If you send anyone a bug report, that readout is the useful part.
-- **"Japanese track was empty" on YouTube**: fixed in 2.1.1. If you still see it, confirm the extension card says 2.3.2 and both reloads above were done, then try turning YouTube's own CC button on once and hitting **Retry detection** in **Subs**.
+- **"Japanese track was empty" on YouTube**: fixed in 2.1.1. If you still see it, confirm the extension card says 2.4.0 and both reloads above were done, then try turning YouTube's own CC button on once and hitting **Retry detection** in **Subs**.
 - **Furigana missing but subtitles show**: give the first video a few seconds, check the small status pill under the caption, and reload the page once. The dictionary is about 17 MB unpacked, so a slow disk can take a moment.
 - **Nothing appears at all**: confirm Developer mode is still on, the extension is enabled at `chrome://extensions`, that the video has actually started, then reload the page. Some sites build their player late; Study Player keeps watching and attaches when a video shows up.
 - **Overlay sits in the wrong place**: it anchors to the player's container. Going fullscreen with the player's own fullscreen button usually fixes positioning; one page reload clears anything stuck.
@@ -72,14 +77,15 @@ Chrome and Edge do not auto-update unpacked extensions. Unzip this version over 
 
 ## Privacy
 
-The extension runs on pages you visit so it can find video players, but it does not collect analytics, does not phone home, and does not send your watch history or word list anywhere. The only network requests it makes are the subtitle-file requests for the video you are already watching, plus local files inside the extension.
+The extension runs on pages you visit so it can find video players, but it does not collect analytics, does not phone home, and does not send your watch history or word list anywhere. The only network requests it makes are the subtitle-file requests for the video you are already watching, plus local files inside the extension. The sentence miner's **Send to Anki** talks to AnkiConnect on your own machine (`http://127.0.0.1:8765`) only when you press the button; the **Listen** button uses your browser's built-in voices with no network involved.
 
 ## Files
 
-- `manifest.json` - extension definition (Manifest V3, all-sites, version 2.3.2)
-- `content.js` / `content.css` - the overlay, transcript, dictionary UI, subtitle parsers (VTT/SRT/ASS, YouTube XML and json3, HLS playlists), native-track reader, auto-loader, diagnostics, and local file loader
+- `manifest.json` - extension definition (Manifest V3, all-sites, version 2.4.0)
+- `content.js` / `content.css` - the overlay, transcript, dictionary UI, subtitle parsers (VTT/SRT/ASS, YouTube XML and json3, HLS playlists), native-track reader, auto-loader, diagnostics, sentence miner, and local file loader
 - `injected.js` - page-world helper installed before the player boots: reads YouTube's caption list, and on other sites notices subtitle files and streaming playlists the player fetches (declared in `manifest.json` as a `world: "MAIN"` content script, so no inline script injection is needed)
 - `popup.html` / `popup.js` / `popup.css` - toolbar popup with toggles, status, and CSV export
-- `background.js` - service worker: first-run defaults, plus the cross-origin subtitle fetch that the on-page code routes through
+- `background.js` - service worker: first-run defaults, the cross-origin subtitle fetch that the on-page code routes through, and the visible-tab screenshot for the sentence miner
 - `lib/kuromoji.js` + `dict/` - local Japanese tokenizer and its dictionary files for furigana
 - `dict/jmdict.json` - the bundled JMdict common-word subset used for English definitions (built from JMdict by EDRDG; see Good to know for attribution)
+- `dict/pitch.json` - pitch-accent patterns for about 102,000 words, derived from the open data files of the Kanjium project (mifunetoshiro/kanjium on GitHub). Loaded only when the sentence miner opens.
