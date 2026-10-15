@@ -6,6 +6,8 @@ Everything runs locally in your browser, fully offline after the first load. No 
 
 **Why this exists:** good Japanese learning tools keep ending up behind weekly or monthly paywalls. This one is built in the open instead, with a little AI help, so anyone can use it, inspect it, and make it better.
 
+**No Japanese subtitles on the site? No problem.** Some services (Crunchyroll, for example) do not offer a Japanese subtitle track at all. Download a Japanese `.srt` for the episode (kitsunekko.net and jimaku.cc are the usual sources for anime) and load it with the **Load sub** button on the control bar. The whole study layer works exactly the same.
+
 ## Screenshots
 
 ![Furigana overlay on a video](screenshots/overlay.jpg)
@@ -21,7 +23,7 @@ Everything runs locally in your browser, fully offline after the first load. No 
 4. Click **Load unpacked** and select the unzipped folder (the folder that contains `manifest.json`).
 5. Pin **Study Player Anywhere** from the puzzle-piece menu so it is always one click away.
 
-******Firefox: open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and choose `manifest.json` inside the folder. Temporary add-ons are removed when Firefox restarts; for a permanent install you would need a signed build.****** CURRENTLY DOES NOT WORK ON FIREFOX. In the process of figuring out the issue.
+Firefox: open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and choose `manifest.json` inside the folder. Temporary add-ons are removed when Firefox restarts; for a permanent install you would need a signed build.
 
 ## Use it (any site)
 
@@ -44,6 +46,7 @@ Everything runs locally in your browser, fully offline after the first load. No 
 - A site in a **cross-origin iframe** player can limit what any extension can see. **Load sub** still works there whenever the video itself is reachable.
 - `.ass` styling and positioning are stripped; only the dialogue text and timing are used. `.ssa` is treated the same way.
 - If a site never exposes any subtitle file and has no CC menu, **Load sub** with a subtitle file you sourced yourself is the whole answer. Subtitle files are widely available separately from videos.
+- **Crunchyroll:** Crunchyroll does not offer a Japanese subtitle track at all, so there is nothing for the extension to pick up automatically. Download a Japanese `.srt` for the episode (kitsunekko.net and jimaku.cc are the usual sources) and load it with the **Load sub** button on the control bar. Verified working in 2.6.0.
 
 ## Good to know
 
@@ -55,7 +58,7 @@ Everything runs locally in your browser, fully offline after the first load. No 
 
 ## Updating (do both reloads, or the old code keeps running)
 
-Chrome and Edge do not auto-update unpacked extensions. Unzip this version over (or next to) the old folder, open `chrome://extensions` (or `edge://extensions`), find **Study Player Anywhere**, click **Reload**, then reload the video tab too. Skipping either reload leaves the old code running. Your saved words carry over. This update takes the version to 2.5.4; the version on the extension card is the quickest way to confirm you are running it.
+Chrome and Edge do not auto-update unpacked extensions. Unzip this version over (or next to) the old folder, open `chrome://extensions` (or `edge://extensions`), find **Study Player Anywhere**, click **Reload**, then reload the video tab too. Skipping either reload leaves the old code running. Your saved words carry over. This update takes the version to 2.6.0; the version on the extension card is the quickest way to confirm you are running it.
 
 ## Known issues
 
@@ -66,7 +69,7 @@ Chrome and Edge do not auto-update unpacked extensions. Unzip this version over 
 ## Troubleshooting
 
 - **Still no subtitles**: open **Subs** on the video. The top box is the diagnostics readout: it shows the page, how many video players and player subtitle tracks were found (with their languages and line counts), which YouTube caption tracks exist, how many subtitle files were spotted, and a short log of what was fetched and what came back. Hit **Retry detection** after pressing play and turning the player's CC on. If you send anyone a bug report, that readout is the useful part.
-- **"Japanese track was empty" on YouTube**: fixed in 2.1.1. If you still see it, confirm the extension card says 2.5.4 and both reloads above were done, then try turning YouTube's own CC button on once and hitting **Retry detection** in **Subs**.
+- **"Japanese track was empty" on YouTube**: fixed in 2.1.1. If you still see it, confirm the extension card says 2.6.0 and both reloads above were done, then try turning YouTube's own CC button on once and hitting **Retry detection** in **Subs**.
 - **Furigana missing but subtitles show**: give the first video a few seconds, check the small status pill under the caption, and reload the page once. The dictionary is about 40 MB unpacked, so a slow disk can take a moment.
 - **Nothing appears at all**: confirm Developer mode is still on, the extension is enabled at `chrome://extensions`, that the video has actually started, then reload the page. Some sites build their player late; Study Player keeps watching and attaches when a video shows up.
 - **Overlay sits in the wrong place**: it anchors to the player's container. Going fullscreen with the player's own fullscreen button usually fixes positioning; one page reload clears anything stuck.
@@ -78,7 +81,7 @@ The extension runs on pages you visit so it can find video players, but it does 
 
 ## Files
 
-- `manifest.json` - extension definition (Manifest V3, all-sites, version 2.5.4)
+- `manifest.json` - extension definition (Manifest V3, all-sites, version 2.6.0)
 - `content.js` / `content.css` - the overlay, transcript, dictionary UI, subtitle parsers (VTT/SRT/ASS, YouTube XML and json3, HLS playlists), native-track reader, auto-loader, diagnostics, sentence miner, and local file loader
 - `injected.js` - page-world helper installed before the player boots: reads YouTube's caption list, and on other sites notices subtitle files and streaming playlists the player fetches (declared in `manifest.json` as a `world: "MAIN"` content script, so no inline script injection is needed)
 - `popup.html` / `popup.js` / `popup.css` - toolbar popup with toggles, status, and CSV export
@@ -88,6 +91,12 @@ The extension runs on pages you visit so it can find video players, but it does 
 - `dict/pitch.json` - pitch-accent patterns for about 102,000 words, derived from the open data files of the Kanjium project (mifunetoshiro/kanjium on GitHub). Loaded only when the sentence miner opens.
 
 ## Changelog
+
+### 2.6.0
+Fixed the overlay never appearing on Crunchyroll. Some players put "player" in the `<video>` tag's own id (Bitmovin uses `bitmovinplayer-video-...`), and the player lookup matched the video element itself, so the overlay was appended inside the `<video>` tag where it can never render. The lookup now starts from the video's parent, so the control bar, Load sub button, and captions mount on the player container like they should. Verified working on Crunchyroll with an uploaded .srt.
+
+### 2.5.5
+Katakana runs finally split the way you read them. Long unspaced katakana strings (テレビラジオパソコン) now break into real words using the bundled dictionary, down to 3-character words like テレビ and アプリ, while names like ヒカキン are left alone. Half-width katakana (ﾃﾚﾋﾞ) is normalized before tokenizing, unsplittable katakana still shows its reading on the word card (katakana reads itself), and kuromoji mis-splits like ガン|ダム are fused back into ガンダム. The dictionary lookup also retries without a trailing long-vowel mark, so インターネットエクスプローラー resolves to the Internet Explorer entry.
 
 ### 2.5.4
 Subtitles stay centered at the bottom when the control bar is minimized. Only the bar parks in the corner now, instead of the whole overlay moving with it.
