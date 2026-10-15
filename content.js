@@ -335,16 +335,24 @@
     for (var i = 0; i < state.enCues.length; i++) if (Math.abs(state.enCues[i].start - cue.start) < 0.65) return state.enCues[i].text;
     return "";
   }
+  function hasDictWord(word) {
+    var hit = dictGet(word);
+    return !!(hit && hit.g && hit.g.length);
+  }
   function tokenize(text) {
-    if (state.tokenCache.has(text)) return state.tokenCache.get(text);
+    // NFKC first: auto-captions sometimes emit half-width katakana
+    // (ﾃﾚﾋﾞ), which the tokenizer and the dictionary both miss.
+    var norm = (text || "").normalize("NFKC");
+    if (state.tokenCache.has(norm)) return state.tokenCache.get(norm);
     if (!state.tokenizer) return null;
     try {
-      var toks = state.tokenizer.tokenize(text);
+      var toks = state.tokenizer.tokenize(norm);
       // Auto-captions often remove the pause between adjacent katakana words.
       // IPADIC then returns the whole run as one unknown proper noun. Refine
-      // those conservative cases into useful click targets before rendering.
-      if (window.SPTokenRefiner) toks = window.SPTokenRefiner.refine(toks, state.tokenizer);
-      state.tokenCache.set(text, toks);
+      // those cases into useful click targets before rendering, using the
+      // bundled JMdict when it has loaded (IPADIC-only fallback otherwise).
+      if (window.SPTokenRefiner) toks = window.SPTokenRefiner.refine(toks, state.tokenizer, { hasWord: hasDictWord });
+      state.tokenCache.set(norm, toks);
       return toks;
     }
     catch (e) { return null; }
@@ -364,7 +372,15 @@
     var yt = document.querySelector("#movie_player");
     if (yt) return yt;
     var v = videoEl(); if (!v) return null;
-    return v.closest(".plyr, .video-js, .jwplayer, .fluid_video_wrapper, [class*='player'], [id*='player']") || v.parentElement || v;
+    // closest() tests the element itself first, and some players put
+    // "player" in the <video> tag's own id or class (Bitmovin on
+    // Crunchyroll uses id "bitmovinplayer-video-..."). Matching the video
+    // itself used to make ensureRoot() append the overlay inside the
+    // <video> element, where it can never render, so the extension looked
+    // completely dead on those players. Start from the parent so the
+    // mount target is always a container.
+    var from = v.parentElement || v;
+    return from.closest(".plyr, .video-js, .jwplayer, .fluid_video_wrapper, [class*='player'], [id*='player']") || v.parentElement || v;
   }
 
   function ensureRoot() {
@@ -745,6 +761,13 @@
     // words like 行きます resolve to 行く. Fall back to the surface form,
     // then to the reading for words written in kana.
     var hit = dictGet(base) || dictGet(surface) || dictGet(readingHira);
+    // JMdict sometimes spells katakana words without the final long vowel
+    // mark (インターネットエクスプローラ for インターネットエクスプローラー).
+    // Strip trailing ー and retry before giving up.
+    if (!hit && typeof surface === "string") {
+      var stripped = surface.replace(/ー+$/, "");
+      if (stripped && stripped !== surface) hit = dictGet(stripped);
+    }
     if (!hit || !hit.g || !hit.g.length) return null;
     return { meaning: hit.g.join("; "), reading: hit.r || "", pos: hit.p || "" };
   }
