@@ -21,7 +21,7 @@ Everything runs locally in your browser, fully offline after the first load. No 
 4. Click **Load unpacked** and select the unzipped folder (the folder that contains `manifest.json`).
 5. Pin **Study Player Anywhere** from the puzzle-piece menu so it is always one click away.
 
-Firefox: open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and choose `manifest.json` inside the folder. Temporary add-ons are removed when Firefox restarts; for a permanent install you would need a signed build.
+******Firefox: open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on**, and choose `manifest.json` inside the folder. Temporary add-ons are removed when Firefox restarts; for a permanent install you would need a signed build.****** CURRENTLY DOES NOT WORK ON FIREFOX. In the process of figuring out the issue.
 
 ## Use it (any site)
 
