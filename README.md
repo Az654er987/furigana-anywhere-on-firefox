@@ -6,7 +6,7 @@ Everything runs locally in your browser, fully offline after the first load. No 
 
 **Why this exists:** good Japanese learning tools keep ending up behind weekly or monthly paywalls. This one is built in the open instead, with a little AI help, so anyone can use it, inspect it, and make it better.
 
-**No Japanese subtitles on the site? No problem.** Some services (Crunchyroll, for example) do not offer a Japanese subtitle track at all. Download a Japanese `.srt` for the episode (kitsunekko.net and jimaku.cc are the usual sources for anime) and load it with the **Load sub** button on the control bar. The whole study layer works exactly the same.
+**No Japanese subtitles on the site? No problem.** Some services (Crunchyroll, for example) do not offer a Japanese subtitle track at all. Download a Japanese `.srt` for the episode (kitsunekko.net and jimaku.cc are the usual sources for anime) and load it with the **Load sub** button in the toolbar popup. The whole study layer works exactly the same.
 
 ## Screenshots
 
@@ -32,7 +32,7 @@ Firefox: open `about:debugging#/runtime/this-firefox`, click **Load Temporary Ad
    - **Automatic (new):** when the extension spots a subtitle file on the page it loads it by itself and tells you in the status pill. You no longer have to open **Subs** and pick it, though you still can.
    - **Player captions:** if the site's own player has a CC / subtitle menu, pick Japanese there. Study Player reads the player's subtitle track directly when the browser exposes it.
    - **Streaming (HLS) captions:** if the player streams with subtitle playlists, Study Player follows the playlist to the actual subtitle segments automatically.
-   - **Subs button:** on the study control bar, **Subs** lists subtitle files (`.vtt` / `.srt` / `.ass` / HLS playlists) the extension spotted the page loading, plus a diagnostics readout (see Troubleshooting). Pick one to load it manually. Players that fetch their subtitle file when you press play often show up here a few seconds after playback starts.
+   - **Subs button:** in the toolbar popup, **Subs** lists subtitle files (`.vtt` / `.srt` / `.ass` / HLS playlists) the extension spotted the page loading, plus a diagnostics readout (see Troubleshooting). Pick one to load it manually. Players that fetch their subtitle file when you press play often show up here a few seconds after playback starts.
    - **Load sub button:** pick an `.srt`, `.vtt`, or `.ass` file from your device (you can select a Japanese and an English file together). This always works, and it is the fallback for sites that hide their captions.
    - **YouTube:** open any YouTube video with a Japanese track (creator captions or auto-generated Japanese) and Study Player picks it up automatically; an English track, when present, shows under each line. If the direct caption fetch still comes back empty, turn the player's own CC on once, Study Player can then read the captions from the request the player itself makes.
 3. Controls under the caption: **Replay** (or `R`), **Loop**, **Furigana** (or `F`), **EN** (or `E`), the speed menu for shadowing, **Transcript** for the searchable line list, **Load sub**, and **Subs**. Tap the **−** button at the right edge to minimize this control menu; tap the small **Controls** button to bring it back.
@@ -46,7 +46,7 @@ Firefox: open `about:debugging#/runtime/this-firefox`, click **Load Temporary Ad
 - A site in a **cross-origin iframe** player can limit what any extension can see. **Load sub** still works there whenever the video itself is reachable.
 - `.ass` styling and positioning are stripped; only the dialogue text and timing are used. `.ssa` is treated the same way.
 - If a site never exposes any subtitle file and has no CC menu, **Load sub** with a subtitle file you sourced yourself is the whole answer. Subtitle files are widely available separately from videos.
-- **Crunchyroll:** Crunchyroll does not offer a Japanese subtitle track at all, so there is nothing for the extension to pick up automatically. Download a Japanese `.srt` for the episode (kitsunekko.net and jimaku.cc are the usual sources) and load it with the **Load sub** button on the control bar. Verified working in 2.6.0.
+- **Crunchyroll:** Crunchyroll does not offer a Japanese subtitle track at all, so there is nothing for the extension to pick up automatically. Download a Japanese `.srt` for the episode (kitsunekko.net and jimaku.cc are the usual sources) and load it with the **Load sub** button in the toolbar popup. Verified working in 2.6.0.
 
 ## Good to know
 
@@ -91,6 +91,9 @@ The extension runs on pages you visit so it can find video players, but it does 
 - `dict/pitch.json` - pitch-accent patterns for about 102,000 words, derived from the open data files of the Kanjium project (mifunetoshiro/kanjium on GitHub). Loaded only when the sentence miner opens.
 
 ## Changelog
+
+### 2.6.1
+**Mine**, **Load sub**, and **Subs** moved off the video control bar into the extension toolbar popup, so the on-video bar stays small. The subtitle menu and file picker still open on the video page; the popup buttons just trigger them. Also: the sentence miner screenshot is now cropped to the video player instead of the whole tab, and on DRM-protected players like Crunchyroll (where tab captures come back black) the miner falls back to capturing the frame straight from the video element with the caption redrawn on it.
 
 ### 2.6.0
 Fixed the overlay never appearing on Crunchyroll. Some players put "player" in the `<video>` tag's own id (Bitmovin uses `bitmovinplayer-video-...`), and the player lookup matched the video element itself, so the overlay was appended inside the `<video>` tag where it can never render. The lookup now starts from the video's parent, so the control bar, Load sub button, and captions mount on the player container like they should. Verified working on Crunchyroll with an uploaded .srt.

@@ -396,15 +396,12 @@
         '<div id="sp-bar">' +
           '<button class="sp-btn" id="sp-prev" type="button" title="Previous line">|&#9664;</button>' +
           '<button class="sp-btn" id="sp-replay" type="button">Replay</button>' +
-          '<button class="sp-btn" id="sp-mine" type="button" title="Mine this line into a flashcard">Mine</button>' +
           '<button class="sp-btn" id="sp-next" type="button" title="Next line">&#9654;|</button>' +
           '<button class="sp-btn" id="sp-loop" type="button" aria-pressed="false">Loop</button>' +
           '<button class="sp-btn" id="sp-furi" type="button" aria-pressed="true">Furigana</button>' +
           '<button class="sp-btn" id="sp-en-toggle" type="button" aria-pressed="true">EN</button>' +
           '<select class="sp-select" id="sp-speed"><option value="0.5">0.5x</option><option value="0.75">0.75x</option><option value="1" selected>1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option><option value="2">2x</option></select>' +
           '<button class="sp-btn" id="sp-panel-btn" type="button">Transcript</button>' +
-          '<button class="sp-btn" id="sp-load-sub" type="button" title="Load a local .srt, .vtt or .ass file">Load sub</button>' +
-          '<button class="sp-btn" id="sp-subs-btn" type="button" aria-pressed="false">Subs</button>' +
           '<button class="sp-btn sp-minimize" id="sp-minimize" type="button" aria-pressed="false" aria-label="Minimize controls" title="Minimize controls">&#8722;</button>' +
         '</div>' +
       '</div>' +
@@ -459,9 +456,19 @@
     var v = videoEl(); if (!v || !v.textTracks) return;
     for (var i = 0; i < v.textTracks.length; i++) { try { v.textTracks[i].mode = "hidden"; } catch (e) {} }
   }
+  function toggleSubsMenu() {
+    if (!subsMenuEl) return false;
+    subsMenuEl.hidden = !subsMenuEl.hidden;
+    if (!subsMenuEl.hidden) renderSubsMenu();
+    return !subsMenuEl.hidden;
+  }
+  function loadSubFile() {
+    if (!fileInputEl) return false;
+    fileInputEl.click();
+    return true;
+  }
   function bindBar() {
     root.querySelector("#sp-replay").addEventListener("click", replay);
-    root.querySelector("#sp-mine").addEventListener("click", openMiner);
     root.querySelector("#sp-prev").addEventListener("click", function () { seekLine(-1); });
     root.querySelector("#sp-next").addEventListener("click", function () { seekLine(1); });
     root.querySelector("#sp-loop").addEventListener("click", function () { state.loop = !state.loop; applyToggles(); saveSettings(); });
@@ -469,17 +476,10 @@
     root.querySelector("#sp-en-toggle").addEventListener("click", function () { state.translation = !state.translation; applyToggles(); saveSettings(); });
     root.querySelector("#sp-speed").addEventListener("change", function () { var v = videoEl(); if (v) v.playbackRate = Number(this.value); });
     root.querySelector("#sp-panel-btn").addEventListener("click", function () { togglePanel(); });
-    root.querySelector("#sp-load-sub").addEventListener("click", function () { if (fileInputEl) fileInputEl.click(); });
     root.querySelector("#sp-minimize").addEventListener("click", function () {
       state.controlsCollapsed = !state.controlsCollapsed;
       if (subsMenuEl) subsMenuEl.hidden = true;
       applyToggles(); saveSettings();
-    });
-    root.querySelector("#sp-subs-btn").addEventListener("click", function () {
-      if (!subsMenuEl) return;
-      subsMenuEl.hidden = !subsMenuEl.hidden;
-      this.setAttribute("aria-pressed", String(!subsMenuEl.hidden));
-      if (!subsMenuEl.hidden) renderSubsMenu();
     });
     if (fileInputEl) fileInputEl.addEventListener("change", function () {
       Array.prototype.forEach.call(fileInputEl.files || [], function (f) {
@@ -876,7 +876,7 @@
      screenshot, TTS listen-back, and export to Anki (via AnkiConnect)
      or CSV. Audio on the saved card is intentionally TTS-preview only;
      no show audio is ever recorded. */
-  var minerCue = null, minerShot = null, minerTokens = [];
+  var minerCue = null, minerShot = null, minerTokens = [], minerGen = 0;
   function minerEl() { return minerPanel || null; }
   function escapeHtml(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -925,7 +925,8 @@
       var v0 = videoEl();
       if (v0) { var idx = findCue(state.jpCues, v0.currentTime); if (idx >= 0) cue = state.jpCues[idx]; }
     }
-    if (!cue) { setStatus("warn", "No subtitle line under the playhead to mine yet."); return; }
+    if (!cue) { setStatus("warn", "No subtitle line under the playhead to mine yet."); return false; }
+    minerGen++;
     minerCue = cue; minerShot = null;
     var v = videoEl(); if (v && !v.paused) { try { v.pause(); } catch (e) {} }
     if (wordCard) wordCard.hidden = true;
@@ -962,17 +963,141 @@
     });
     var shotImg = mel.querySelector("#sp-mn-shot");
     shotImg.removeAttribute("src"); shotImg.style.display = "none";
+    // Crop the tab screenshot to the player rect so the card image
+    // is just the video player with the captions, not the whole page.
+    // captureVisibleTab returns device pixels, so scale the CSS rect by dpr.
+    var myGen = minerGen, shotRect = null;
+    try {
+      var pl = playerEl();
+      if (pl) {
+        var r = pl.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+        if (r.width > 40 && r.height > 40) {
+          var rx = Math.max(0, r.left), ry = Math.max(0, r.top);
+          shotRect = {
+            x: rx, y: ry,
+            w: Math.min(r.width, window.innerWidth - rx),
+            h: Math.min(r.height, window.innerHeight - ry),
+            dpr: dpr
+          };
+        }
+      }
+    } catch (e) { shotRect = null; }
+    // Hide the miner side window for the capture so it can't cover the player.
+    mel.hidden = true;
     try {
       chrome.runtime.sendMessage({ type: "SP_MINER_SHOT" }, function (resp) {
+        if (myGen === minerGen) mel.hidden = false;
         if (resp && resp.ok && resp.dataUrl) {
-          minerShot = resp.dataUrl;
-          shotImg.src = resp.dataUrl;
-          shotImg.style.display = "";
+          cropMinerShot(resp.dataUrl, shotRect, function (res) {
+            var shot = (res && res.url) || resp.dataUrl;
+            if (res && res.black) {
+              // Protected video path (e.g. Crunchyroll DRM): tab capture
+              // blanks the video. Fall back to the raw video frame with
+              // the caption redrawn on it.
+              videoFrameShot(function (frameUrl) {
+                minerShot = frameUrl || shot;
+                shotImg.src = minerShot;
+                shotImg.style.display = "";
+              });
+            } else {
+              minerShot = shot;
+              shotImg.src = minerShot;
+              shotImg.style.display = "";
+            }
+          });
         }
       });
-    } catch (e) {}
+    } catch (e) { if (myGen === minerGen) mel.hidden = false; }
+    return true;
+  }
+  // Crop a captureVisibleTab data URL to a CSS-pixel rect (scaled by dpr).
+  // Also reports whether the crop looks black (protected video path) so the
+  // caller can fall back to a direct video-frame capture. Falls back to the
+  // uncropped image when anything looks off.
+  function cropMinerShot(dataUrl, rect, done) {
+    function fallback() { try { done(null); } catch (e) {} }
+    if (!rect) return fallback();
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+        var dpr = rect.dpr || 1;
+        var sx = Math.round(rect.x * dpr), sy = Math.round(rect.y * dpr);
+        var sw = Math.round(rect.w * dpr), sh = Math.round(rect.h * dpr);
+        if (sx < 0) { sw += sx; sx = 0; }
+        if (sy < 0) { sh += sy; sy = 0; }
+        if (sx + sw > iw) sw = iw - sx;
+        if (sy + sh > ih) sh = ih - sy;
+        if (sw < 20 || sh < 20) return fallback();
+        var c = document.createElement("canvas");
+        c.width = sw; c.height = sh;
+        var ctx = c.getContext("2d");
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+        var url = null;
+        try { url = c.toDataURL("image/jpeg", 0.82); } catch (e) { url = null; }
+        if (!url) return fallback();
+        var black = false;
+        try { black = isCanvasBlack(ctx, sw, sh); } catch (e) { black = false; }
+        done({ url: url, black: black });
+      } catch (e) { fallback(); }
+    };
+    img.onerror = fallback;
+    img.src = dataUrl;
+  }
+  // True when the sampled regions of a canvas are essentially black.
+  function isCanvasBlack(ctx, w, h) {
+    var pts = [[0.5, 0.5], [0.25, 0.5], [0.75, 0.5], [0.5, 0.3], [0.5, 0.7]];
+    var sum = 0, n = 0, i, j;
+    for (i = 0; i < pts.length; i++) {
+      var x = Math.max(0, Math.min(w - 8, Math.round(w * pts[i][0]) - 4));
+      var y = Math.max(0, Math.min(h - 8, Math.round(h * pts[i][1]) - 4));
+      var d = ctx.getImageData(x, y, 8, 8).data;
+      for (j = 0; j < d.length; j += 4) { sum += d[j] + d[j + 1] + d[j + 2]; n++; }
+    }
+    return n > 0 && (sum / n / 3) < 12;
+  }
+  // Direct video-frame capture for DRM-black tab screenshots.
+  // Redraws the mined caption since the raw frame has no overlay.
+  function videoFrameShot(done) {
+    function fail() { try { done(null); } catch (e) {} }
+    try {
+      var v = videoEl();
+      if (!v || !v.videoWidth || !v.videoHeight) return fail();
+      var c = document.createElement("canvas");
+      c.width = v.videoWidth; c.height = v.videoHeight;
+      var ctx = c.getContext("2d");
+      ctx.drawImage(v, 0, 0, c.width, c.height);
+      if (isCanvasBlack(ctx, c.width, c.height)) return fail();
+      if (minerCue && minerCue.text) drawMinerCaption(ctx, c.width, c.height, minerCue.text);
+      done(c.toDataURL("image/jpeg", 0.82));
+    } catch (e) { fail(); }
+  }
+  function drawMinerCaption(ctx, W, H, text) {
+    var size = Math.max(22, Math.round(H * 0.06));
+    ctx.font = size + 'px "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    var maxW = W * 0.92, lines = [], line = "", i;
+    var chars = String(text).split("");
+    for (i = 0; i < chars.length; i++) {
+      var t = line + chars[i];
+      if (line && ctx.measureText(t).width > maxW) { lines.push(line); line = chars[i]; }
+      else line = t;
+    }
+    if (line) lines.push(line);
+    if (lines.length > 3) lines = lines.slice(0, 3);
+    var lh = Math.round(size * 1.3), y = H - Math.round(H * 0.05);
+    ctx.lineWidth = Math.max(3, Math.round(size / 7));
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.fillStyle = "#ffffff";
+    for (i = lines.length - 1; i >= 0; i--) {
+      ctx.strokeText(lines[i], W / 2, y);
+      ctx.fillText(lines[i], W / 2, y);
+      y -= lh;
+    }
   }
   function closeMiner() {
+    minerGen++;
     var mel = minerEl(); if (mel) mel.hidden = true;
     try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
   }
@@ -1284,5 +1409,25 @@
       sendResponse({ ok: true }); return true;
     }
     if (msg && msg.type === "SP_TOGGLE_PANEL") { togglePanel(); sendResponse({ ok: true }); return true; }
+    if (msg && msg.type === "SP_MINE") {
+      if (!ensureRoot()) { sendResponse({ ok: false, error: "no-player" }); return true; }
+      var mined = false;
+      try { mined = openMiner() === true; } catch (e) { mined = false; }
+      sendResponse(mined ? { ok: true } : { ok: false, error: "no-cue" });
+      return true;
+    }
+    if (msg && msg.type === "SP_LOAD_SUB") {
+      var loaded = false;
+      try { loaded = ensureRoot() && loadSubFile(); } catch (e) { loaded = false; }
+      sendResponse(loaded ? { ok: true } : { ok: false, error: "no-player" });
+      return true;
+    }
+    if (msg && msg.type === "SP_SUBS") {
+      if (!ensureRoot()) { sendResponse({ ok: false, error: "no-player" }); return true; }
+      var menuOpen = false;
+      try { menuOpen = toggleSubsMenu(); } catch (e) { menuOpen = false; }
+      sendResponse({ ok: true, open: menuOpen });
+      return true;
+    }
   });
 })();

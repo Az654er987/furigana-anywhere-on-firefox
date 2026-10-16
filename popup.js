@@ -56,6 +56,30 @@
     });
   });
 
+  function tabAction(type, okMsg, failMsg) {
+    sendToTab({ type: type }).then(function (resp) {
+      if (!resp) { setStatus("Open a page with a video player first, then try again."); return; }
+      if (!resp.ok) {
+        setStatus(resp.error === "no-cue" ? "No subtitle line under the playhead yet. Play the video first." : (failMsg || "That didn't work on this page."));
+        return;
+      }
+      if (okMsg) setStatus(okMsg);
+      window.close();
+    });
+  }
+
+  document.getElementById("mineBtn").addEventListener("click", function () {
+    tabAction("SP_MINE", "Mining this line into a flashcard.", "Couldn't mine on this page.");
+  });
+
+  document.getElementById("loadSubBtn").addEventListener("click", function () {
+    tabAction("SP_LOAD_SUB", "Pick a subtitle file.", "Couldn't open the file picker on this page.");
+  });
+
+  document.getElementById("subsBtn").addEventListener("click", function () {
+    tabAction("SP_SUBS", "Subtitle menu toggled on the video.", "Couldn't open the subtitle menu on this page.");
+  });
+
   document.getElementById("exportBtn").addEventListener("click", function () {
     chrome.storage.local.get(["sp_vocab"], function (res) {
       var vocab = Array.isArray(res.sp_vocab) ? res.sp_vocab : [];
