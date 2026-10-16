@@ -51,7 +51,7 @@ Firefox: open `about:debugging#/runtime/this-firefox`, click **Load Temporary Ad
 ## Good to know
 
 - Plain Japanese text always works. Furigana is generated locally in your browser with a built-in Japanese dictionary (the `dict` folder), so the first video takes a few seconds while it loads, then it is instant for the rest of the session. It works fully offline after that.
-- Word definitions come from the full JMdict, the EDRDG Japanese-English dictionary (465,845 lookup forms, common words prioritized). It loads once per page in the background; a word tapped during those first seconds fills its definition in automatically when the dictionary lands. JMdict is (C) the Electronic Dictionary Research and Development Group, used under their licence (https://www.edrdg.org/edrdg/licence.html).
+- Word definitions come from the full JMdict, the EDRDG Japanese-English dictionary (465,845 lookup forms, common words prioritized). It loads once per page in the background; a word tapped during those first seconds fills its definition in automatically when the dictionary lands. JMdict is (C) the Electronic Dictionary Research and Development Group, used under their licence (https://www.edrdg.org/edrdg/licence.html). JLPT word levels come from the OpenJLPT project (https://github.com/evanclan/OpenJLPT), used under CC BY-SA 4.0; the JLPT has published no official vocabulary lists since 2010, so levels are a well-informed approximation.
 - Native player captions are hidden while the overlay is on so you do not see double subtitles. Your player's own caption settings are not changed.
 - Saved words are stored only in this browser (`chrome.storage.local`). Clearing the extension's data clears the list, so export a CSV when it matters.
 - Because this build runs on any site, the browser will show a broader site-access permission than the old YouTube-only build. The extension still makes no analytics calls and sends nothing anywhere; it only reads the page's own video and subtitle data locally, plus local files inside the extension.
@@ -91,6 +91,9 @@ The extension runs on pages you visit so it can find video players, but it does 
 - `dict/pitch.json` - pitch-accent patterns for about 102,000 words, derived from the open data files of the Kanjium project (mifunetoshiro/kanjium on GitHub). Loaded only when the sentence miner opens.
 
 ## Changelog
+
+### 2.7.0
+Three study upgrades. **JLPT labels:** tapping any word now shows its JLPT level (N5-N1) on the word card, so you can tell at a glance whether a word is worth saving. **Known words:** mark words as known from the word card and they fade in the captions, so new words stand out; the toolbar popup can also mark every N5, N4, or N3 word as known in one tap, and clear the list. **Anki customization:** the toolbar popup now has an Anki section where you pick the target deck, note type, and tags instead of the hardcoded Default deck and Basic note type, plus a Test connection button that pings AnkiConnect and reports its version.
 
 ### 2.6.2
 Send to Anki now works on sites with a strict Content-Security-Policy (like Crunchyroll), which used to block the miner's direct request to AnkiConnect and fail every export with "not reachable" even with Anki open. The request now falls back to the background service worker, which the page policy cannot block.

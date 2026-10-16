@@ -22,6 +22,15 @@
     });
   }
 
+  function refreshKnown() {
+    sendToTab({ type: "SP_KNOWN_COUNT" }).then(function (resp) {
+      var n = resp && resp.ok ? resp.count : 0;
+      document.getElementById("knownMeta").textContent =
+        (n ? n + (n === 1 ? " word" : " words") + " marked as known. " : "No known words yet. ") +
+        "Known words fade in the captions so new words stand out.";
+    });
+  }
+
   function refresh() {
     chrome.storage.local.get(["sp_settings", "sp_vocab"], function (res) {
       var s = res.sp_settings || {};
@@ -39,6 +48,14 @@
       else if (resp.dict) lines += " Dictionary is loading, definitions will appear in a few seconds.";
       setStatus(lines);
     });
+    sendToTab({ type: "SP_ANKI_GET" }).then(function (resp) {
+      if (resp && resp.ok && resp.anki) {
+        document.getElementById("ankiDeck").value = resp.anki.deck || "";
+        document.getElementById("ankiModel").value = resp.anki.model || "";
+        document.getElementById("ankiTags").value = resp.anki.tags || "";
+      }
+    });
+    refreshKnown();
   }
 
   function push() {
@@ -92,6 +109,51 @@
       var a = document.createElement("a"); a.href = url; a.download = "japanese-vocabulary.csv";
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 800);
+    });
+  });
+
+  document.getElementById("ankiSave").addEventListener("click", function () {
+    var anki = {
+      deck: document.getElementById("ankiDeck").value.trim() || "Default",
+      model: document.getElementById("ankiModel").value.trim() || "Basic",
+      tags: document.getElementById("ankiTags").value.trim()
+    };
+    sendToTab({ type: "SP_ANKI_SET", anki: anki }).then(function (resp) {
+      document.getElementById("ankiMeta").textContent = resp
+        ? "Saved. Mined cards go to deck '" + anki.deck + "' as '" + anki.model + "' notes."
+        : "Open a page with a video player first, then try again.";
+    });
+  });
+
+  document.getElementById("ankiTest").addEventListener("click", function () {
+    var meta = document.getElementById("ankiMeta");
+    meta.textContent = "Pinging AnkiConnect...";
+    sendToTab({ type: "SP_ANKI_TEST" }).then(function (resp) {
+      if (!resp) { meta.textContent = "Open a page with a video player first, then try again."; return; }
+      meta.textContent = resp.ok
+        ? "Connected: AnkiConnect v" + resp.version + " is listening."
+        : "Not reachable (" + (resp.error || "no response") + "). Open Anki with the AnkiConnect add-on installed.";
+    });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll(".bulkBtn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var lvl = btn.getAttribute("data-bulk");
+      btn.disabled = true;
+      sendToTab({ type: "SP_KNOWN_BULK", level: lvl }).then(function (resp) {
+        btn.disabled = false;
+        if (!resp) { setStatus("Open a page with a video player first, then try again."); return; }
+        setStatus(resp.ok ? "Marked " + resp.added + " new words as known (" + resp.total + " total)." : "That didn't work on this page.");
+        refreshKnown();
+      });
+    });
+  });
+
+  document.getElementById("knownClear").addEventListener("click", function () {
+    sendToTab({ type: "SP_KNOWN_CLEAR" }).then(function (resp) {
+      if (!resp) { setStatus("Open a page with a video player first, then try again."); return; }
+      setStatus("Known words cleared.");
+      refreshKnown();
     });
   });
 

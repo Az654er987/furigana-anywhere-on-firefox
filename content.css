@@ -105,12 +105,16 @@
 .sp-wc-reading { color: #0e7074; font-weight: 700; margin-top: 2px; font-size: 14px; }
 .sp-wc-romaji { color: #5c686e; font-weight: 700; margin-top: 2px; font-size: 13px; letter-spacing: .03em; }
 .sp-wc-pos { display: inline-block; margin-top: 9px; background: #dff2f1; color: #0e7074; border-radius: 999px; padding: 3px 8px; font-size: 11px; font-weight: 800; }
+.sp-wc-jlpt { display: inline-block; margin-top: 9px; margin-left: 6px; background: #fef3c7; color: #b45309; border-radius: 999px; padding: 3px 8px; font-size: 11px; font-weight: 800; }
 .sp-wc-meaning { margin: 12px 0 14px; font-size: 14px; line-height: 1.5; }
 .sp-wc-meaning.unknown { color: #5c686e; }
 .sp-wc-close { border: 0; background: #f7f8f8; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 16px; flex: 0 0 auto; }
 .sp-wc-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .sp-wc-save { border: 0; background: #e44a2a; color: #fff; border-radius: 9px; padding: 8px 12px; font-weight: 800; cursor: pointer; font-size: 13px; }
 .sp-wc-save:disabled { opacity: .5; cursor: default; }
+.sp-wc-know { border: 0; background: #0e7074; color: #fff; border-radius: 9px; padding: 8px 12px; font-weight: 800; cursor: pointer; font-size: 13px; }
+.sp-wc-know.known { background: #0ea5e9; }
+.sp-word.sp-known { opacity: .45; }
 #sp-panel {
   position: fixed; top: 56px; right: 0; bottom: 0; width: min(390px, 94vw); z-index: 9999;
   background: #fff; color: #111619; box-shadow: -14px 0 40px rgba(0,0,0,.25);

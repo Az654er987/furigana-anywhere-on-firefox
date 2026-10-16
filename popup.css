@@ -16,6 +16,13 @@ body { margin: 0; width: 340px; font-family: "Hiragino Kaku Gothic ProN", "Yu Go
 .btn.primary { background: #e44a2a; border-color: #e44a2a; color: #fff; }
 .btn:disabled { opacity: .5; cursor: default; }
 .meta { margin: 8px 16px 0; color: #5c686e; font-size: 12px; }
+.settings { padding: 12px 16px 4px; border-top: 1px solid #eef1f2; margin-top: 8px; }
+.settings h2 { margin: 0 0 8px; font-size: 13px; }
+.settings .field { display: block; margin: 0 0 8px; }
+.settings .field span { display: block; font-size: 12px; font-weight: 700; color: #344047; margin-bottom: 4px; }
+.settings .field input { width: 100%; box-sizing: border-box; border: 1px solid #d6dcdf; border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+.settings .actions { padding: 4px 0 0; }
+.settings .meta { margin: 8px 0 0; }
 .how { padding: 12px 16px 16px; }
 .how h2 { margin: 0 0 8px; font-size: 13px; }
 .how ol { margin: 0; padding-left: 18px; color: #344047; font-size: 12px; line-height: 1.6; }

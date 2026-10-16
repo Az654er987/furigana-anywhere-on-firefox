@@ -24,7 +24,8 @@
     panelOpen: false, panelTab: "transcript", controlsCollapsed: false,
     discovered: [], discoveredSet: {}, genericLoaded: false, videoCount: 0,
     diag: [], autoTried: {}, autoLoadedFrom: "", nativeInfo: [],
-    dict: null, dictStatus: "loading", lastTok: null
+    dict: null, dictStatus: "loading", lastTok: null,
+    known: {}, anki: { deck: "Default", model: "Basic", tags: "furigana-anywhere" }
   };
   function diagLog(msg) {
     try {
@@ -408,8 +409,8 @@
       '<aside id="sp-word-card" hidden>' +
         '<div class="sp-wc-head"><div><div class="sp-wc-main" id="sp-wc-main"></div><div class="sp-wc-reading" id="sp-wc-reading"></div><div class="sp-wc-romaji" id="sp-wc-romaji"></div></div>' +
         '<button class="sp-wc-close" id="sp-wc-close" type="button" aria-label="Close">x</button></div>' +
-        '<span class="sp-wc-pos" id="sp-wc-pos"></span><p class="sp-wc-meaning" id="sp-wc-meaning"></p>' +
-        '<div class="sp-wc-actions"><button class="sp-wc-save" id="sp-wc-save" type="button">Save word</button></div>' +
+        '<span class="sp-wc-pos" id="sp-wc-pos"></span> <span class="sp-wc-jlpt" id="sp-wc-jlpt" style="display:none"></span><p class="sp-wc-meaning" id="sp-wc-meaning"></p>' +
+        '<div class="sp-wc-actions"><button class="sp-wc-know" id="sp-wc-know" type="button">I know this</button><button class="sp-wc-save" id="sp-wc-save" type="button">Save word</button></div>' +
       '</aside>';
     var fileInput = document.createElement("input");
     fileInput.type = "file"; fileInput.id = "sp-file"; fileInput.accept = ".srt,.vtt,.ass,.ssa,.txt"; fileInput.multiple = true; fileInput.hidden = true;
@@ -661,6 +662,8 @@
     toks.forEach(function (tok) {
       var btn = document.createElement("button");
       btn.type = "button"; btn.className = "sp-word"; btn.textContent = "";
+      var base = tok.basic_form && tok.basic_form !== "*" ? tok.basic_form : tok.surface_form;
+      if (isKnown(base, tok.surface_form)) btn.classList.add("sp-known");
       btn.setAttribute("aria-label", tok.surface_form + (tok.reading && tok.reading !== "*" ? ", " + kataToHira(tok.reading) : ""));
       var parts = rubyParts(tok.surface_form, tok.reading);
       if (parts) {
@@ -814,12 +817,28 @@
     if (/^[぀-ヶー]+$/.test(readingKana)) { romajiEl.textContent = hiraToRomaji(readingKana); romajiEl.style.display = ""; }
     else { romajiEl.textContent = ""; romajiEl.style.display = "none"; }
     document.getElementById("sp-wc-pos").textContent = state.selectedWord.pos;
+    var jlptBadge = document.getElementById("sp-wc-jlpt");
+    jlptBadge.textContent = ""; jlptBadge.style.display = "none";
+    loadJlpt().then(function () {
+      var lvl = jlptFor(base, tok.surface_form);
+      if (lvl) { jlptBadge.textContent = lvl; jlptBadge.style.display = ""; }
+    });
     var mEl = document.getElementById("sp-wc-meaning");
     mEl.textContent = meaning;
     mEl.classList.toggle("unknown", !known);
     var exists = state.vocab.some(function (it) { return it.word === base && it.reading === state.selectedWord.reading; });
     var saveBtn = document.getElementById("sp-wc-save");
     saveBtn.textContent = exists ? "Saved" : "Save word"; saveBtn.disabled = exists;
+    var knowBtn = document.getElementById("sp-wc-know");
+    var alreadyKnown = isKnown(base, tok.surface_form);
+    knowBtn.textContent = alreadyKnown ? "Known" : "I know this";
+    knowBtn.classList.toggle("known", alreadyKnown);
+    knowBtn.onclick = function () {
+      var nowKnown = !isKnown(base, tok.surface_form);
+      setKnown(base, tok.surface_form, nowKnown);
+      knowBtn.textContent = nowKnown ? "Known" : "I know this";
+      knowBtn.classList.toggle("known", nowKnown);
+    };
     wordCard.hidden = false;
     var v = videoEl(); if (v && !v.paused) { /* keep playing; learner can pause with space */ }
   }
@@ -901,6 +920,35 @@
     if (!arr || !arr.length) return "";
     for (var i = 0; i < arr.length; i++) if (!readingHira || arr[i][0] === readingHira) return arr[i][1];
     return arr[0][1];
+  }
+  var jlptData = null, jlptPromise = null;
+  function loadJlpt() {
+    if (jlptData) return Promise.resolve(jlptData);
+    if (jlptPromise) return jlptPromise;
+    jlptPromise = fetch(chrome.runtime.getURL("dict/jlpt.json"))
+      .then(function (r) { if (!r.ok) throw new Error("no jlpt data"); return r.json(); })
+      .then(function (d) { jlptData = d || {}; return jlptData; })
+      .catch(function () { jlptData = {}; return jlptData; });
+    return jlptPromise;
+  }
+  function jlptFor(base, surface) {
+    if (!jlptData) return "";
+    return jlptData[base] || jlptData[surface] || "";
+  }
+  function knownKey(base, surface) { return base || surface || ""; }
+  function isKnown(base, surface) {
+    var k = knownKey(base, surface);
+    return !!(k && state.known && state.known[k]);
+  }
+  function persistKnown() {
+    try { chrome.storage.local.set({ sp_known: state.known }); } catch (e) {}
+  }
+  function setKnown(base, surface, known) {
+    var k = knownKey(base, surface);
+    if (!k) return;
+    if (known) state.known[k] = 1; else delete state.known[k];
+    persistKnown();
+    if (state.activeIndex >= 0) renderActive();
   }
   function minerRubyInto(el, toks) {
     // Same ruby rendering as the caption overlay, as static spans.
@@ -1031,7 +1079,7 @@
         if (sw < 20 || sh < 20) return fallback();
         var c = document.createElement("canvas");
         c.width = sw; c.height = sh;
-        var ctx = c.getContext("2d");
+        var ctx = c.getContext("2d", { willReadFrequently: true });
         ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
         var url = null;
         try { url = c.toDataURL("image/jpeg", 0.82); } catch (e) { url = null; }
@@ -1065,7 +1113,7 @@
       if (!v || !v.videoWidth || !v.videoHeight) return fail();
       var c = document.createElement("canvas");
       c.width = v.videoWidth; c.height = v.videoHeight;
-      var ctx = c.getContext("2d");
+      var ctx = c.getContext("2d", { willReadFrequently: true });
       ctx.drawImage(v, 0, 0, c.width, c.height);
       if (isCanvasBlack(ctx, c.width, c.height)) return fail();
       if (minerCue && minerCue.text) drawMinerCaption(ctx, c.width, c.height, minerCue.text);
@@ -1164,12 +1212,14 @@
     var back = escapeHtml(f.reading) + "<br><br>" +
       f.glosses.map(escapeHtml).join("<br>") +
       "<br><br><small>" + escapeHtml(f.title) + " - " + escapeHtml(f.time) + "</small>";
+    var tags = (state.anki.tags || "").split(/[\s,]+/).filter(function (t) { return t; });
+    if (!tags.length) tags = ["furigana-anywhere"];
     var note = {
-      deckName: "Default",
-      modelName: "Basic",
+      deckName: state.anki.deck || "Default",
+      modelName: state.anki.model || "Basic",
       fields: { Front: escapeHtml(f.sentence), Back: back },
       options: { allowDuplicate: false },
-      tags: ["furigana-anywhere"]
+      tags: tags
     };
     if (minerShot && minerShot.indexOf(",") > 0) {
       note.picture = [{ data: minerShot.split(",")[1], filename: "fa_mine_" + Date.now() + ".jpg", fields: ["Back"] }];
@@ -1342,7 +1392,7 @@
   }
   function loadPersisted() {
     try {
-      chrome.storage.local.get(["sp_settings", "sp_vocab"], function (res) {
+      chrome.storage.local.get(["sp_settings", "sp_vocab", "sp_known", "sp_anki"], function (res) {
         if (res.sp_settings) {
           state.enabled = res.sp_settings.enabled !== false;
           state.furigana = res.sp_settings.furigana !== false;
@@ -1350,6 +1400,12 @@
           state.controlsCollapsed = res.sp_settings.controlsCollapsed === true;
         }
         if (Array.isArray(res.sp_vocab)) state.vocab = res.sp_vocab;
+        if (res.sp_known && typeof res.sp_known === "object") state.known = res.sp_known;
+        if (res.sp_anki && typeof res.sp_anki === "object") {
+          if (res.sp_anki.deck) state.anki.deck = String(res.sp_anki.deck);
+          if (res.sp_anki.model) state.anki.model = String(res.sp_anki.model);
+          if (typeof res.sp_anki.tags === "string") state.anki.tags = res.sp_anki.tags;
+        }
         applyToggles(); renderVocab();
       });
     } catch (e) {
@@ -1448,6 +1504,53 @@
       var menuOpen = false;
       try { menuOpen = toggleSubsMenu(); } catch (e) { menuOpen = false; }
       sendResponse({ ok: true, open: menuOpen });
+      return true;
+    }
+    if (msg && msg.type === "SP_ANKI_GET") {
+      sendResponse({ ok: true, anki: state.anki });
+      return true;
+    }
+    if (msg && msg.type === "SP_ANKI_SET") {
+      if (msg.anki && typeof msg.anki === "object") {
+        if (typeof msg.anki.deck === "string" && msg.anki.deck) state.anki.deck = msg.anki.deck;
+        if (typeof msg.anki.model === "string" && msg.anki.model) state.anki.model = msg.anki.model;
+        if (typeof msg.anki.tags === "string") state.anki.tags = msg.anki.tags;
+        try { chrome.storage.local.set({ sp_anki: state.anki }); } catch (e) {}
+      }
+      sendResponse({ ok: true });
+      return true;
+    }
+    if (msg && msg.type === "SP_ANKI_TEST") {
+      ankiRequest({ action: "version" }).then(function (v) {
+        sendResponse({ ok: true, version: v });
+      }).catch(function (e) {
+        sendResponse({ ok: false, error: (e && e.message) || "unreachable" });
+      });
+      return true;
+    }
+    if (msg && msg.type === "SP_KNOWN_COUNT") {
+      sendResponse({ ok: true, count: Object.keys(state.known).length });
+      return true;
+    }
+    if (msg && msg.type === "SP_KNOWN_CLEAR") {
+      state.known = {}; persistKnown();
+      if (state.activeIndex >= 0) renderActive();
+      sendResponse({ ok: true });
+      return true;
+    }
+    if (msg && msg.type === "SP_KNOWN_BULK") {
+      var order = ["N5", "N4", "N3", "N2", "N1"];
+      var maxIdx = order.indexOf(msg.level || "N5");
+      if (maxIdx < 0) maxIdx = 0;
+      loadJlpt().then(function () {
+        var added = 0;
+        Object.keys(jlptData).forEach(function (w) {
+          if (order.indexOf(jlptData[w]) <= maxIdx && !state.known[w]) { state.known[w] = 1; added++; }
+        });
+        persistKnown();
+        if (state.activeIndex >= 0) renderActive();
+        sendResponse({ ok: true, added: added, total: Object.keys(state.known).length });
+      });
       return true;
     }
   });

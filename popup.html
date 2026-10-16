@@ -45,6 +45,31 @@
 
   <p class="meta" id="vocabMeta">Saved words load from the video page.</p>
 
+  <section class="settings">
+    <h2>Anki export</h2>
+    <label class="field"><span>Deck name</span><input id="ankiDeck" type="text" placeholder="Default" autocomplete="off"></label>
+    <label class="field"><span>Note type</span><input id="ankiModel" type="text" placeholder="Basic" autocomplete="off"></label>
+    <label class="field"><span>Tags</span><input id="ankiTags" type="text" placeholder="furigana-anywhere" autocomplete="off"></label>
+    <div class="actions">
+      <button class="btn primary" id="ankiSave" type="button">Save Anki settings</button>
+      <button class="btn" id="ankiTest" type="button">Test connection</button>
+    </div>
+    <p class="meta" id="ankiMeta">Mined cards go to this deck and note type. Note type must have Front, Back, and (for screenshots) a picture field.</p>
+  </section>
+
+  <section class="settings">
+    <h2>Known words</h2>
+    <p class="meta" id="knownMeta">Words you mark as known fade in the captions so new words stand out.</p>
+    <div class="actions">
+      <button class="btn bulkBtn" data-bulk="N5" type="button" title="Mark every N5 word as known">I know N5</button>
+      <button class="btn bulkBtn" data-bulk="N4" type="button" title="Mark every N5 and N4 word as known">I know N4</button>
+      <button class="btn bulkBtn" data-bulk="N3" type="button" title="Mark every N5, N4 and N3 word as known">I know N3</button>
+    </div>
+    <div class="actions">
+      <button class="btn" id="knownClear" type="button">Clear all known words</button>
+    </div>
+  </section>
+
   <section class="how">
     <h2>How it works</h2>
     <ol>
