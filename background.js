@@ -18,6 +18,23 @@ chrome.runtime.onInstalled.addListener(function (details) {
 });
 
 chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
+  if (msg && msg.type === "SP_ANKI_ADD" && msg.payload) {
+    // v2.6.2: AnkiConnect POSTs go through the service worker because a
+    // page's Content-Security-Policy can block a content script's direct
+    // fetch() to localhost (Crunchyroll does), which made Send to Anki
+    // fail with "not reachable" even with Anki open and AnkiConnect up.
+    // The target is hardcoded to AnkiConnect's loopback address; only the
+    // JSON-RPC payload comes from the page.
+    fetch("http://127.0.0.1:8765", {
+      method: "POST",
+      body: JSON.stringify(msg.payload)
+    }).then(function (r) {
+      return r.json().then(function (j) { sendResponse({ ok: true, data: j }); });
+    }).catch(function (e) {
+      sendResponse({ ok: false, error: String(e && e.message || e) });
+    });
+    return true; // async sendResponse
+  }
   if (msg && msg.type === "SP_MINER_SHOT") {
     // v2.4.0 sentence miner: capture the visible tab as the card image.
     // Covered by the existing activeTab + <all_urls> host permissions;

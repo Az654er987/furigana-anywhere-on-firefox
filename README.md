@@ -92,6 +92,9 @@ The extension runs on pages you visit so it can find video players, but it does 
 
 ## Changelog
 
+### 2.6.2
+Send to Anki now works on sites with a strict Content-Security-Policy (like Crunchyroll), which used to block the miner's direct request to AnkiConnect and fail every export with "not reachable" even with Anki open. The request now falls back to the background service worker, which the page policy cannot block.
+
 ### 2.6.1
 **Mine**, **Load sub**, and **Subs** moved off the video control bar into the extension toolbar popup, so the on-video bar stays small. The subtitle menu and file picker still open on the video page; the popup buttons just trigger them. Also: the sentence miner screenshot is now cropped to the video player instead of the whole tab, and on DRM-protected players like Crunchyroll (where tab captures come back black) the miner falls back to capturing the frame straight from the video element with the caption redrawn on it.
 

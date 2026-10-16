@@ -1133,6 +1133,29 @@
       title: String(document.title || "")
     };
   }
+  // v2.6.2: AnkiConnect lives on localhost, but a page's
+  // Content-Security-Policy can block a content script's direct fetch()
+  // to it (Crunchyroll does), which used to fail every Send to Anki with
+  // "not reachable" even with Anki open and AnkiConnect answering.
+  // Try direct first, then fall back to the background proxy, which is
+  // not bound by page CSP (same pattern as subtitle fetching).
+  function ankiRequest(payload) {
+    return fetch("http://127.0.0.1:8765", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }).then(function (r) { return r.json(); }).catch(function () {
+      diagLog("anki direct fetch failed, trying background proxy");
+      return new Promise(function (resolve, reject) {
+        try {
+          chrome.runtime.sendMessage({ type: "SP_ANKI_ADD", payload: payload }, function (resp) {
+            if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
+            if (resp && resp.ok) resolve(resp.data);
+            else reject(new Error((resp && resp.error) || "proxy failed"));
+          });
+        } catch (e) { reject(e); }
+      });
+    });
+  }
   function minerToAnki() {
     var mel = minerEl(); if (!mel) return;
     var msgEl = mel.querySelector("#sp-mn-msg");
@@ -1151,13 +1174,11 @@
     if (minerShot && minerShot.indexOf(",") > 0) {
       note.picture = [{ data: minerShot.split(",")[1], filename: "fa_mine_" + Date.now() + ".jpg", fields: ["Back"] }];
     }
-    fetch("http://127.0.0.1:8765", {
-      method: "POST",
-      body: JSON.stringify({ action: "addNote", version: 6, params: { note: note } })
-    }).then(function (r) { return r.json(); }).then(function (j) {
+    ankiRequest({ action: "addNote", version: 6, params: { note: note } }).then(function (j) {
       if (j && j.error) msgEl.textContent = "Anki said: " + j.error;
       else { msgEl.textContent = "Sent to Anki."; closeMiner(); }
-    }).catch(function () {
+    }).catch(function (e) {
+      diagLog("anki failed: " + (e && e.message || e));
       msgEl.textContent = "AnkiConnect is not reachable. Open Anki with the AnkiConnect add-on installed, or use CSV instead.";
     });
   }
