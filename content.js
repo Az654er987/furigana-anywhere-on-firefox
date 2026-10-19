@@ -776,8 +776,9 @@
   }
   function loadDictionary() {
     var url;
-    try { url = chrome.runtime.getURL("dict/jmdict.json"); } catch (e) { state.dictStatus = "unavailable"; return; }
-    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+    try { url = chrome.runtime.getURL("dict/jmdict.json.gz"); } catch (e) { state.dictStatus = "unavailable"; return; }
+    // Firefox fork: the dictionary ships gzipped (AMO rejects text files over 5 MB).
+    fetch(url).then(function (r) { return new Response(r.body.pipeThrough(new DecompressionStream("gzip"))).json(); }).then(function (data) {
       state.dict = data || {};
       state.dictStatus = "ready";
       diagLog("dictionary ready - " + Object.keys(state.dict).length + " forms");

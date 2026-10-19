@@ -1,14 +1,17 @@
 {
   "action": {
     "default_icon": {
-      "128": "icons/icon128.png",
       "16": "icons/icon16.png",
-      "48": "icons/icon48.png"
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     },
     "default_popup": "popup.html",
     "default_title": "Study Player Anywhere"
   },
   "background": {
+    "scripts": [
+      "background.js"
+    ],
     "service_worker": "background.js"
   },
   "content_scripts": [
@@ -44,9 +47,9 @@
     "<all_urls>"
   ],
   "icons": {
-    "128": "icons/icon128.png",
     "16": "icons/icon16.png",
-    "48": "icons/icon48.png"
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "manifest_version": 3,
   "name": "Study Player Anywhere",
@@ -55,7 +58,7 @@
     "activeTab",
     "scripting"
   ],
-  "version": "2.7.0",
+  "version": "2.7.0.3",
   "web_accessible_resources": [
     {
       "matches": [
@@ -66,5 +69,17 @@
         "lib/kuromoji.js"
       ]
     }
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{79e55574-d9ee-4c95-b2b6-ec3c61f9fe63}",
+      "strict_min_version": "140.0",
+      "update_url": "https://raw.githubusercontent.com/Az654er987/furigana-anywhere-on-firefox/main/updates.json",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  }
 }

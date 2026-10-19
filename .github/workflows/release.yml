@@ -1,0 +1,88 @@
+name: Signer et publier pour Firefox
+
+# Publie une nouvelle version signée dès que la version de manifest.json change sur main.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Lire la version
+        id: meta
+        run: |
+          echo "version=$(jq -r .version manifest.json)" >> "$GITHUB_OUTPUT"
+          echo "gecko_id=$(jq -r .browser_specific_settings.gecko.id manifest.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Déjà publiée ?
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Version $VERSION déjà publiée : rien à faire (monter la version dans manifest.json pour publier)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nouvelle version à signer : $VERSION"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Valider avec le linter Mozilla
+        if: steps.check.outputs.skip == 'false'
+        run: npx --yes web-ext@10 lint --source-dir . --self-hosted --ignore-files "screenshots/**" "updates.json"
+
+      - name: Signer (canal non listé)
+        if: steps.check.outputs.skip == 'false'
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          npx --yes web-ext@10 sign \
+            --source-dir . \
+            --artifacts-dir "$RUNNER_TEMP/dist" \
+            --ignore-files "screenshots/**" "updates.json" \
+            --channel unlisted \
+            --approval-timeout 3600000
+
+      - name: Créer la release et mettre à jour updates.json
+        if: steps.check.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          GECKO_ID: ${{ steps.meta.outputs.gecko_id }}
+        run: |
+          set -euo pipefail
+          XPI="furigana-anywhere-$VERSION.xpi"
+          mv "$(ls "$RUNNER_TEMP"/dist/*.xpi | head -n 1)" "$RUNNER_TEMP/$XPI"
+          HASH=$(sha256sum "$RUNNER_TEMP/$XPI" | cut -d' ' -f1)
+
+          gh release create "v$VERSION" "$RUNNER_TEMP/$XPI" \
+            --title "Study Player Anywhere $VERSION (Firefox)" \
+            --generate-notes
+
+          LINK="https://github.com/${GITHUB_REPOSITORY}/releases/download/v$VERSION/$XPI"
+          jq -n --arg id "$GECKO_ID" --arg v "$VERSION" --arg l "$LINK" --arg h "sha256:$HASH" \
+            '{addons: {($id): {updates: [{version: $v, update_link: $l, update_hash: $h}]}}}' > updates.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add updates.json
+          git commit -m "updates.json : version $VERSION"
+          git pull --rebase
+          git push
