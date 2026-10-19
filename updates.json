@@ -1,0 +1,13 @@
+{
+  "addons": {
+    "{79e55574-d9ee-4c95-b2b6-ec3c61f9fe63}": {
+      "updates": [
+        {
+          "version": "2.7.0.3",
+          "update_link": "https://github.com/Az654er987/furigana-anywhere-on-firefox/releases/download/v2.7.0.3/furigana-anywhere-2.7.0.3.xpi",
+          "update_hash": "sha256:066b5654a156e99925d993379b3a0aa8a52b6dd6c94a42124be0f1dce2a5db3d"
+        }
+      ]
+    }
+  }
+}
