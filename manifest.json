@@ -14,34 +14,6 @@
     ],
     "service_worker": "background.js"
   },
-  "content_scripts": [
-    {
-      "all_frames": true,
-      "css": [
-        "content.css"
-      ],
-      "js": [
-        "lib/kuromoji.js",
-        "lib/token-refiner.js",
-        "content.js"
-      ],
-      "matches": [
-        "<all_urls>"
-      ],
-      "run_at": "document_idle"
-    },
-    {
-      "all_frames": true,
-      "js": [
-        "injected.js"
-      ],
-      "matches": [
-        "<all_urls>"
-      ],
-      "run_at": "document_start",
-      "world": "MAIN"
-    }
-  ],
   "description": "Adds furigana, clickable word lookup, line replay, and a study transcript on top of Japanese subtitles on almost any web video player. Load your own .srt/.vtt if a site hides its captions.",
   "host_permissions": [
     "<all_urls>"
@@ -58,7 +30,7 @@
     "activeTab",
     "scripting"
   ],
-  "version": "2.7.0.3",
+  "version": "2.7.1",
   "web_accessible_resources": [
     {
       "matches": [

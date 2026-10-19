@@ -44,3 +44,16 @@ git merge upstream/main
 
 En cas de conflit sur `dict/jmdict.json` (mis à jour par l'auteur), regénérer la version
 compressée : `gzip -9 -c dict/jmdict.json > dict/jmdict.json.gz && git rm dict/jmdict.json`.
+
+## Interrupteur On/Off (ajout du fork)
+
+L'extension est **désactivée par défaut** : un interrupteur en haut du popup l'allume
+ou l'éteint, comme dans Yomitan, et l'icône affiche un badge « ON » quand elle est active.
+
+- Éteinte, aucun script n'est injecté dans les pages : `background.js` n'enregistre
+  les content scripts (`scripting.registerContentScripts`) que lorsque `sp_active` vaut
+  `true`, au lieu de les déclarer dans le manifest.
+- En l'allumant, elle démarre tout de suite dans l'onglet courant (injection depuis le
+  popup), sans recharger la page. En l'éteignant, l'interface est retirée des onglets
+  ouverts ; le petit script de détection des sous-titres déjà présent dans ces pages ne
+  disparaît qu'au rechargement.

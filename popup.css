@@ -4,6 +4,14 @@ body { margin: 0; width: 340px; font-family: "Hiragino Kaku Gothic ProN", "Yu Go
 .logo { width: 42px; height: 42px; border-radius: 12px; background: #e44a2a; color: #fff; display: grid; place-items: center; font-size: 22px; font-weight: 800; flex: 0 0 auto; }
 .head h1 { margin: 0; font-size: 18px; line-height: 1.15; }
 .head p { margin: 4px 0 0; color: #5c686e; font-size: 12px; line-height: 1.45; }
+.power { display: flex; align-items: center; gap: 12px; margin: 0 16px 10px; padding: 10px 12px; border: 1px solid #d6dcdf; border-radius: 12px; background: #f7f8f8; }
+.power-btn { position: relative; flex: 0 0 auto; width: 76px; height: 34px; border-radius: 17px; border: 1px solid #c4ccd0; background: #e9edef; color: #5c686e; font-weight: 800; font-size: 13px; cursor: pointer; padding: 0 12px 0 36px; text-align: left; transition: background .15s, color .15s; }
+.power-knob { position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .15s; }
+.power-btn[aria-pressed="true"] { background: #e44a2a; border-color: #e44a2a; color: #fff; padding: 0 36px 0 12px; text-align: right; }
+.power-btn[aria-pressed="true"] .power-knob { left: 45px; }
+.power-btn:focus-visible { outline: 2px solid #344047; outline-offset: 2px; }
+.power-hint { margin: 0; font-size: 12px; color: #5c686e; line-height: 1.4; }
+body.is-off #whenOn { display: none; }
 .status { margin: 0 16px; background: #f7f8f8; border: 1px solid #d6dcdf; border-radius: 10px; padding: 8px 10px; font-size: 12px; color: #5c686e; }
 .toggles { padding: 10px 16px 4px; }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 10px 0; border-bottom: 1px solid #eef1f2; cursor: pointer; }

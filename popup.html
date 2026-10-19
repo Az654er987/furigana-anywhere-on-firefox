@@ -6,7 +6,7 @@
   <title>Study Player</title>
   <link rel="stylesheet" href="popup.css">
 </head>
-<body>
+<body class="is-off">
   <header class="head">
     <div class="logo" aria-hidden="true">&#12354;</div>
     <div>
@@ -15,13 +15,17 @@
     </div>
   </header>
 
+  <div class="power">
+    <button class="power-btn" id="power" type="button" aria-pressed="false" title="Turn the study layer on or off">
+      <span class="power-knob" aria-hidden="true"></span><span id="powerLabel">Off</span>
+    </button>
+    <p class="power-hint" id="powerHint">Off: nothing runs on any page.</p>
+  </div>
+
+  <div id="whenOn">
   <div class="status" id="status">Checking this tab</div>
 
   <div class="toggles">
-    <label class="row">
-      <span><strong> Study overlay</strong><small>Show furigana captions over the video</small></span>
-      <input type="checkbox" id="enabled">
-    </label>
     <label class="row">
       <span><strong>Furigana</strong><small>Readings over kanji</small></span>
       <input type="checkbox" id="furigana">
@@ -69,6 +73,8 @@
       <button class="btn" id="knownClear" type="button">Clear all known words</button>
     </div>
   </section>
+
+  </div>
 
   <section class="how">
     <h2>How it works</h2>

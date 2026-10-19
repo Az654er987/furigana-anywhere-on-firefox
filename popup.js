@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  var enabledEl = document.getElementById("enabled");
+  var powerEl = document.getElementById("power");
   var furiganaEl = document.getElementById("furigana");
   var translationEl = document.getElementById("translation");
   var statusEl = document.getElementById("status");
@@ -22,6 +22,49 @@
     });
   }
 
+  /* Fork: On/Off switch. Off by default; sp_active drives the background's
+     content script registration, and open tabs follow it on their own. */
+  function renderPower(on) {
+    powerEl.setAttribute("aria-pressed", String(on));
+    document.getElementById("powerLabel").textContent = on ? "On" : "Off";
+    document.getElementById("powerHint").textContent = on
+      ? "On: the study layer runs on every page you open. Turn it off when you are done."
+      : "Off: nothing runs on any page. Turn it on when you are on a page you want to study.";
+    document.body.classList.toggle("is-off", !on);
+  }
+  function activeTab() {
+    return new Promise(function (resolve) {
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) { resolve(tabs && tabs[0]); });
+    });
+  }
+  // Start the study layer in the current tab right away, without a reload.
+  // A tab where it already ran follows the switch by itself (storage event).
+  function injectIntoTab(tab) {
+    if (!tab || !tab.id || !/^https?:/.test(tab.url || "")) return Promise.resolve();
+    return new Promise(function (resolve) {
+      chrome.tabs.sendMessage(tab.id, { type: "SP_PING" }, function (resp) {
+        void chrome.runtime.lastError;
+        if (resp && resp.ok) { resolve(); return; }
+        var target = { tabId: tab.id, allFrames: true };
+        Promise.all([
+          chrome.scripting.insertCSS({ target: target, files: ["content.css"] }),
+          chrome.scripting.executeScript({ target: target, files: ["injected.js"], world: "MAIN" })
+        ]).then(function () {
+          return chrome.scripting.executeScript({ target: target, files: ["lib/kuromoji.js", "lib/token-refiner.js", "content.js"] });
+        }).catch(function (e) { console.warn("[Study Player] injection failed", e); }).then(resolve);
+      });
+    });
+  }
+  powerEl.addEventListener("click", function () {
+    var on = powerEl.getAttribute("aria-pressed") !== "true";
+    renderPower(on);
+    chrome.storage.local.set({ sp_active: on }, function () {
+      if (!on) return;
+      setStatus("Starting on this page...");
+      activeTab().then(injectIntoTab).then(function () { setTimeout(refresh, 1200); });
+    });
+  });
+
   function refreshKnown() {
     sendToTab({ type: "SP_KNOWN_COUNT" }).then(function (resp) {
       var n = resp && resp.ok ? resp.count : 0;
@@ -32,16 +75,16 @@
   }
 
   function refresh() {
-    chrome.storage.local.get(["sp_settings", "sp_vocab"], function (res) {
+    chrome.storage.local.get(["sp_settings", "sp_vocab", "sp_active"], function (res) {
       var s = res.sp_settings || {};
-      enabledEl.checked = s.enabled !== false;
+      renderPower(res.sp_active === true);
       furiganaEl.checked = s.furigana !== false;
       translationEl.checked = s.translation !== false;
       var n = Array.isArray(res.sp_vocab) ? res.sp_vocab.length : 0;
       vocabMeta.textContent = n ? n + (n === 1 ? " word" : " words") + " saved. Open a video and use Transcript > Vocabulary to review, or Export on the video page." : "No saved words yet. Tap any Japanese word over a video to save it.";
     });
     sendToTab({ type: "SP_GET_STATE" }).then(function (resp) {
-      if (!resp) { setStatus("Open any page with a video player to connect. Settings below still apply to the next video."); return; }
+      if (!resp || resp.active === false) { setStatus("Open any page with a video player to connect. Settings below still apply to the next video."); return; }
       var lines = resp.lines ? resp.lines + " Japanese lines loaded on this video." : "No Japanese lines loaded yet. On the video, press play, open Subs, or use Load sub to add an .srt/.vtt file.";
       if (resp.dict === "ready") lines += " Dictionary ready: " + resp.dictWords + " word forms, so tapped words show real definitions.";
       else if (resp.dict === "unavailable") lines += " Dictionary file failed to load; only the small built-in glossary will answer.";
@@ -59,12 +102,12 @@
   }
 
   function push() {
-    var settings = { enabled: enabledEl.checked, furigana: furiganaEl.checked, translation: translationEl.checked };
+    var settings = { enabled: true, furigana: furiganaEl.checked, translation: translationEl.checked };
     chrome.storage.local.set({ sp_settings: settings });
-    sendToTab({ type: "SP_SET", enabled: settings.enabled, furigana: settings.furigana, translation: settings.translation });
+    sendToTab({ type: "SP_SET", furigana: settings.furigana, translation: settings.translation });
   }
 
-  [enabledEl, furiganaEl, translationEl].forEach(function (el) { el.addEventListener("change", push); });
+  [furiganaEl, translationEl].forEach(function (el) { el.addEventListener("change", push); });
 
   document.getElementById("openPanel").addEventListener("click", function () {
     sendToTab({ type: "SP_TOGGLE_PANEL" }).then(function (resp) {

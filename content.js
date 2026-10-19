@@ -454,6 +454,7 @@
     hideNativeTracks();
   }
   function hideNativeTracks() {
+    if (!active) return;
     var v = videoEl(); if (!v || !v.textTracks) return;
     for (var i = 0; i < v.textTracks.length; i++) { try { v.textTracks[i].mode = "hidden"; } catch (e) {} }
   }
@@ -563,6 +564,7 @@
     }
   }
   function pollNativeTracks() {
+    if (!active) return;
     var v = videoEl(); if (!v) return;
     try {
       v.querySelectorAll("track[src]").forEach(function (t) { addDiscovered(t.src); });
@@ -699,6 +701,7 @@
     }
   }
   function updateForTime(force) {
+    if (!active) return;
     var v = videoEl(); if (!v || !state.jpCues.length) return;
     var t = v.currentTime;
     if (state.loop && state.activeIndex >= 0) {
@@ -1364,6 +1367,7 @@
   /* ---------- Video wiring ---------- */
   var wiredVideo = null, rafId = 0;
   function tick() {
+    if (!active) return;
     updateForTime(false);
     // v2.3.4: YouTube sometimes swaps the <video> element mid-playback
     // (ad transitions, quality changes). The old element goes paused, the
@@ -1395,7 +1399,7 @@
     try {
       chrome.storage.local.get(["sp_settings", "sp_vocab", "sp_known", "sp_anki"], function (res) {
         if (res.sp_settings) {
-          state.enabled = res.sp_settings.enabled !== false;
+          state.enabled = true; // fork: the toolbar On/Off switch replaces the old overlay toggle
           state.furigana = res.sp_settings.furigana !== false;
           state.translation = res.sp_settings.translation !== false;
           state.controlsCollapsed = res.sp_settings.controlsCollapsed === true;
@@ -1431,6 +1435,7 @@
     }, 12000);
   }
   window.addEventListener("message", function (ev) {
+    if (!active) return;
     if (ev.source === window && ev.data && ev.data.type === "SP_GENERIC_SUB_URL") { ensureRoot(); addDiscovered(ev.data.url); return; }
     if (ev.source === window && ev.data && ev.data.type === "SP_GENERIC_SUB_TEXT") { ensureRoot(); loadSubtitleText(ev.data.text, ev.data.url); return; }
     if (ev.source !== window || !ev.data) return;
@@ -1446,27 +1451,60 @@
     }
   });
   function boot() {
+    if (!active) return;
     // Start the furigana engine even when the player has not mounted yet.
     // Auto-caption videos can create their video element later than manual-CC
     // videos, which previously skipped tokenizer startup entirely.
     initTokenizer();
     if (ensureRoot()) { wireVideo(); loadPersisted(); updateForTime(true); armCaptionWatchdog(); }
   }
-  var bootTimer = setInterval(function () {
-    initTokenizer();
-    if (ensureRoot()) { wireVideo(); pollNativeTracks(); }
-  }, 1500);
-  try {
-    new MutationObserver(function () { if (ensureRoot()) wireVideo(); }).observe(document.documentElement, { childList: true, subtree: true });
-  } catch (e) {}
-  loadDictionary();
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
+  /* ---------- Fork: On/Off switch ----------
+     Nothing starts until the toolbar switch is on (storage key sp_active).
+     The background only registers the content scripts while it is on;
+     start()/stop() let a tab that is already open follow the switch
+     without a reload. */
+  var active = false, bootTimer = null, domObserver = null, dictRequested = false;
+  function start() {
+    if (active) return;
+    active = true;
+    state.enabled = true;
+    if (!dictRequested) { dictRequested = true; loadDictionary(); }
+    bootTimer = setInterval(function () {
+      initTokenizer();
+      if (ensureRoot()) { wireVideo(); pollNativeTracks(); }
+    }, 1500);
+    try {
+      domObserver = new MutationObserver(function () { if (ensureRoot()) wireVideo(); });
+      domObserver.observe(document.documentElement, { childList: true, subtree: true });
+    } catch (e) {}
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();
+    // Switched back on in a tab that already ran: ask the page bridge for the
+    // caption tracks again and restart the caption loop if the video plays.
+    try { window.postMessage({ type: "SP_REQUEST_TRACKS" }, "*"); } catch (e) {}
+    if (wiredVideo && !wiredVideo.paused && !wiredVideo.ended) { cancelAnimationFrame(rafId); tick(); }
+  }
+  function stop() {
+    if (!active) return;
+    active = false;
+    clearInterval(bootTimer); bootTimer = null;
+    if (domObserver) { domObserver.disconnect(); domObserver = null; }
+    clearCaptionWatchdog();
+    cancelAnimationFrame(rafId);
+    ["sp-root", "sp-file", "sp-subs-menu", "sp-miner-panel"].forEach(function (id) {
+      var el = document.getElementById(id); if (el) el.remove();
+    });
+    if (panel) { panel.remove(); panel = null; }
+    state.panelOpen = false;
+    minerPanel = null;
+    try { document.body.classList.remove("sp-native-off"); } catch (e) {}
+  }
   document.addEventListener("yt-navigate-finish", function () {
     state.jpCues = []; state.enCues = []; state.activeIndex = -1; state.currentVideoId = "";
     state.autoTried = {}; state.autoLoadedFrom = ""; state.diag = []; state.tracksSeen = []; state.tokenCache.clear();
-    setTimeout(function () { var old = document.getElementById("sp-root"); if (old) old.remove(); if (panel) { panel.remove(); panel = null; } ensureRoot(); wireVideo(); loadPersisted(); armCaptionWatchdog(); }, 400);
+    setTimeout(function () { if (!active) return; var old = document.getElementById("sp-root"); if (old) old.remove(); if (panel) { panel.remove(); panel = null; } ensureRoot(); wireVideo(); loadPersisted(); armCaptionWatchdog(); }, 400);
   });
   document.addEventListener("keydown", function (ev) {
+    if (!active) return;
     var tag = (ev.target && ev.target.tagName) || "";
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || ev.target.isContentEditable) return;
     var k = ev.key.toLowerCase();
@@ -1475,6 +1513,8 @@
     else if (k === "e") { state.translation = !state.translation; applyToggles(); saveSettings(); }
   });
   chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
+    if (msg && msg.type === "SP_PING") { sendResponse({ ok: true, active: active }); return true; }
+    if (!active) { sendResponse(msg && msg.type === "SP_GET_STATE" ? { active: false } : { ok: false, error: "inactive" }); return true; }
     if (msg && msg.type === "SP_GET_STATE") {
       sendResponse({ enabled: state.enabled, furigana: state.furigana, translation: state.translation, vocabCount: state.vocab.length, lines: state.jpCues.length, enLines: state.enCues.length, found: state.discovered.length, tracks: (state.tracksSeen || []).map(function (t) { return t.languageCode; }), native: state.nativeInfo || [], dict: state.dictStatus, dictWords: state.dict ? Object.keys(state.dict).length : 0, diag: (state.diag || []).slice(0, 8) });
       return true;
@@ -1555,4 +1595,11 @@
       return true;
     }
   });
+  chrome.storage.onChanged.addListener(function (changes, area) {
+    if (area !== "local" || !changes.sp_active) return;
+    if (changes.sp_active.newValue === true) start(); else stop();
+  });
+  try {
+    chrome.storage.local.get(["sp_active"], function (res) { if (res && res.sp_active === true) start(); });
+  } catch (e) {}
 })();

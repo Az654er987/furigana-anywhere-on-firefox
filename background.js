@@ -4,7 +4,41 @@
    Routing the subtitle download through the service worker uses the
    extension origin and the declared host_permissions, so cross-origin
    .vtt/.srt/.ass and YouTube timedtext files actually come back. */
+/* Fork: On/Off switch (storage key sp_active, off by default). The content
+   scripts are registered only while it is on, so nothing at all runs on
+   pages when it is off. Firefox clears registered scripts when the
+   extension updates, hence the re-sync on install/update and startup. */
+var SP_SCRIPT_IDS = ["sp-bridge", "sp-main"];
+var SP_SCRIPTS = [
+  { id: "sp-bridge", matches: ["<all_urls>"], js: ["injected.js"], runAt: "document_start", allFrames: true, world: "MAIN" },
+  { id: "sp-main", matches: ["<all_urls>"], js: ["lib/kuromoji.js", "lib/token-refiner.js", "content.js"], css: ["content.css"], runAt: "document_idle", allFrames: true }
+];
+var spQueue = Promise.resolve();
+function spApply(active) {
+  spQueue = spQueue.then(function () {
+    try {
+      chrome.action.setBadgeText({ text: active ? "ON" : "" });
+      chrome.action.setBadgeBackgroundColor({ color: "#e44a2a" });
+    } catch (e) {}
+    return chrome.scripting.getRegisteredContentScripts({ ids: SP_SCRIPT_IDS }).then(function (regs) {
+      var ids = (regs || []).map(function (r) { return r.id; });
+      return ids.length ? chrome.scripting.unregisterContentScripts({ ids: ids }) : null;
+    }).then(function () {
+      if (active) return chrome.scripting.registerContentScripts(SP_SCRIPTS);
+    });
+  }).catch(function (e) { console.warn("[Study Player] content script registration failed", e); });
+  return spQueue;
+}
+function spSync() {
+  chrome.storage.local.get(["sp_active"], function (res) { spApply(!!(res && res.sp_active === true)); });
+}
+chrome.runtime.onStartup.addListener(spSync);
+chrome.storage.onChanged.addListener(function (changes, area) {
+  if (area === "local" && changes.sp_active) spApply(changes.sp_active.newValue === true);
+});
+
 chrome.runtime.onInstalled.addListener(function (details) {
+  spSync();
   chrome.storage.local.get(["sp_settings"], function (res) {
     if (!res.sp_settings) {
       chrome.storage.local.set({
